@@ -238,6 +238,9 @@ const SB = {
       ErrorLogger?.dbError(`rpc/${fn}`, JSON.stringify(params).slice(0, 300), r.status, err.message || err.hint || err.details);
       throw new Error(err.message || `RPC ${fn} falló: ${r.status}`);
     }
+    // 204 No Content (funciones void) o respuesta vacía — devolver null sin intentar parsear
+    const ct = r.headers.get('content-type') || '';
+    if (r.status === 204 || !ct.includes('json')) return null;
     return r.json();
   },
 

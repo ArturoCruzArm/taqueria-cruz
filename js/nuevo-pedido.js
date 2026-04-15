@@ -56,6 +56,7 @@ const NuevoPedido = {
     this.mesa = '';
     this.orden = null;
     this.cuenta = null;
+    this._working = false;
 
     // Detectar modo: editar orden, agregar a cuenta, o nuevo
     if (param1 === 'cuenta' && param2) {
@@ -431,6 +432,7 @@ const NuevoPedido = {
       this.clearDraft();
       location.hash = 'pedidos';
     } catch (e) {
+      ErrorLogger?.capture(e, 'NuevoPedido.guardar');
       App.toast('Error al guardar: ' + e.message, 'error');
       this._working = false;
       const btn = document.getElementById('btnGuardar');
