@@ -294,7 +294,7 @@ const Corte = {
       });
 
       await SB.insertN('taq_cortes', {
-        fecha: new Date().toISOString().split('T')[0],
+        fecha: App.hoy(),
         total_ventas: totalVentas,
         total_ordenes: numOrdenes,
         productos_vendidos: prodList,

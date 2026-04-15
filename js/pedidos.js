@@ -379,7 +379,7 @@ const Pedidos = {
           <div class="pedido-num">${ordenes.length > 1 ? ordenes.length + ' pedidos' : '#' + ordenes[0].numero}</div>
           <div class="pedido-time">${mins} min</div>
           <ul class="pedido-items">
-            ${items.map(i => `<li>${i.cantidad}x ${i.nombre_producto}${i.notas ? ' <small>(' + i.notas + ')</small>' : ''}${i.estado === 'entregado' ? ' ✓' : i.estado === 'listo' ? ' 🍽️' : ''}</li>`).join('')}
+            ${items.map(i => `<li>${i.cantidad}x ${App.esc(i.nombre_producto)}${i.notas ? ' <small>(' + App.esc(i.notas) + ')</small>' : ''}${i.estado === 'entregado' ? ' ✓' : i.estado === 'listo' ? ' 🍽️' : ''}</li>`).join('')}
           </ul>
           <div class="pedido-total">$${totalCuenta.toFixed(0)}</div>
           <div class="pedido-actions">
@@ -416,7 +416,7 @@ const Pedidos = {
             <div class="pedido-num">#${o.numero}</div>
             <div class="pedido-time">${mins} min</div>
             <ul class="pedido-items">
-              ${oItems.map(i => `<li>${i.cantidad}x ${i.nombre_producto}${i.notas ? ' <small>(' + i.notas + ')</small>' : ''}</li>`).join('')}
+              ${oItems.map(i => `<li>${i.cantidad}x ${App.esc(i.nombre_producto)}${i.notas ? ' <small>(' + App.esc(i.notas) + ')</small>' : ''}</li>`).join('')}
             </ul>
             <div class="pedido-total">$${(o.total || 0).toFixed(0)}</div>
             <div class="pedido-actions">

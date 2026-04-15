@@ -119,7 +119,7 @@ const Cocina = {
                     onchange="Cocina.toggleItem('${i.id}', this.checked, '${o.id}')">
                   <strong>${i.cantidad}x</strong> ${i.nombre_producto}
                 </label>
-                ${i.notas ? `<div class="cocina-nota">⚠ ${i.notas}</div>` : ''}
+                ${i.notas ? `<div class="cocina-nota">⚠ ${App.esc(i.notas)}</div>` : ''}
                 ${i.estado === 'entregado' ? '<span class="cocina-item-badge entregado">Entregado</span>' : ''}
                 ${i.estado === 'listo' ? '<span class="cocina-item-badge listo">Listo</span>' : ''}
               </li>

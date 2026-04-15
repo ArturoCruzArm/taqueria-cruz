@@ -173,7 +173,8 @@ const Cobrar = {
     if (this._working) return;  // guard contra doble tap
 
     const pago = parseFloat(document.getElementById('pagoInput')?.value) || 0;
-    if (pago === 0 && !confirm('No se registró monto de pago. ¿Continuar de todas formas?')) return;
+    const metodoCheck = document.querySelector('input[name="metodo"]:checked')?.value || 'efectivo';
+    if (metodoCheck === 'efectivo' && pago === 0 && !confirm('No se registró monto de pago. ¿Continuar de todas formas?')) return;
 
     const btn = document.getElementById('btnCobrar');
     this._working = true;
@@ -214,7 +215,7 @@ const Cobrar = {
       // Cerrar tareas pendientes de estas órdenes (recoger comida, llevar cuenta, etc.)
       await this.cerrarTareasDeOrdenes();
 
-      App.toast('Cobrado $' + this.total.toFixed(0));
+      App.toast('Cobrado $' + totalFinal.toFixed(0));
       location.hash = 'pedidos';
     } catch (e) {
       ErrorLogger?.capture(e, 'Cobrar.cobrar');
