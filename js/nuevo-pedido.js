@@ -281,7 +281,7 @@ const NuevoPedido = {
     let html = '';
     if (cuentasAbiertas.length) {
       html += cuentasAbiertas.map(c =>
-        `<button class="cliente-chip cliente-chip-cuenta" onclick="location.hash='nuevo/cuenta/${c.id}'">🔄 ${c.nombre_cliente || c.mesa}</button>`
+        `<button class="cliente-chip cliente-chip-cuenta" onclick="location.hash='nuevo/cuenta/${c.id}'">🔄 ${App.esc(c.nombre_cliente || c.mesa)}</button>`
       ).join('');
     }
 
@@ -293,7 +293,7 @@ const NuevoPedido = {
 
     if (nuevos.length) {
       html += nuevos.slice(0, 5).map(n =>
-        `<button class="cliente-chip" onclick="NuevoPedido.setMesa('${n.replace(/'/g,"\\'")}'); document.getElementById('clienteInput').value='${n.replace(/'/g,"\\'")}'">${n}</button>`
+        `<button class="cliente-chip" onclick="NuevoPedido.setMesa('${n.replace(/'/g,"\\'")}'); document.getElementById('clienteInput').value='${n.replace(/'/g,"\\'")}'">${App.esc(n)}</button>`
       ).join('');
     }
 
@@ -321,7 +321,7 @@ const NuevoPedido = {
           <button class="qty-btn" onclick="NuevoPedido.changeQty(${i}, -1)">&minus;</button>
           <span class="qty-num">${item.cantidad}</span>
           <button class="qty-btn" onclick="NuevoPedido.changeQty(${i}, 1)">+</button>
-          <input type="text" class="nota-input" placeholder="Nota..." value="${item.notas}" onchange="NuevoPedido.setNota(${i}, this.value)">
+          <input type="text" class="nota-input" placeholder="Nota..." value="${App.esc(item.notas)}" onchange="NuevoPedido.setNota(${i}, this.value)">
           <button class="btn-remove" onclick="NuevoPedido.removeItem(${i})">✕</button>
         </div>
       </div>
