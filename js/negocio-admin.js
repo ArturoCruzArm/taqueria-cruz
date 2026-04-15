@@ -98,21 +98,23 @@ const NegocioAdmin = {
             const url = m.qr_token ? `${base}cliente.html?n=${slug}&mesa=${m.qr_token}` : null;
             return `
             <div class="config-mesa-item">
-              <span class="config-mesa-nombre">${m.nombre}</span>
+              <div class="config-mesa-header">
+                <span class="config-mesa-nombre">${m.nombre}</span>
+                <div style="display:flex;gap:4px;flex-shrink:0">
+                  ${m.activa
+                    ? `<button class="btn btn-sm btn-outline" onclick="NegocioAdmin.toggleMesa('${m.id}', false)">Desactivar</button>`
+                    : `<button class="btn btn-sm btn-success" onclick="NegocioAdmin.toggleMesa('${m.id}', true)">Activar</button>`
+                  }
+                  <button class="btn btn-sm btn-outline" onclick="NegocioAdmin.editarMesa('${m.id}', '${m.nombre.replace(/'/g,"\\'")}')">✏️</button>
+                </div>
+              </div>
               ${url ? `
-                <div style="font-size:.72rem;color:var(--muted);word-break:break-all;margin:2px 0">${url}</div>
-                <div style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0">
+                <div style="font-size:.72rem;color:var(--muted);word-break:break-all">${url}</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap">
                   <button class="btn btn-sm btn-outline" onclick="navigator.clipboard.writeText('${url.replace(/'/g,"\\'")}').then(()=>App.toast('URL copiada'))">📋 Copiar</button>
                   <a class="btn btn-sm btn-outline" href="${url}" target="_blank">🔗 Abrir</a>
                 </div>
               ` : `<span style="font-size:.72rem;color:var(--muted)">Sin token QR — recrea la mesa para generarlo</span>`}
-              <div>
-                ${m.activa
-                  ? `<button class="btn btn-sm btn-outline" onclick="NegocioAdmin.toggleMesa('${m.id}', false)">Desactivar</button>`
-                  : `<button class="btn btn-sm btn-success" onclick="NegocioAdmin.toggleMesa('${m.id}', true)">Activar</button>`
-                }
-                <button class="btn btn-sm btn-outline" onclick="NegocioAdmin.editarMesa('${m.id}', '${m.nombre.replace(/'/g,"\\'")}')">✏️</button>
-              </div>
             </div>
           `}).join('')}
         </div>

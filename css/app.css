@@ -949,14 +949,19 @@ body {
 .config-mesas { display: flex; flex-direction: column; gap: 6px; }
 .config-mesa-item {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 4px;
   padding: 8px 12px;
   background: var(--bg);
   border-radius: var(--radius);
+}
+.config-mesa-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 8px;
 }
-.config-mesa-nombre { font-weight: 600; }
+.config-mesa-nombre { font-weight: 600; flex: 1; }
 
 /* ── BTN DANGER ── */
 .btn-danger {

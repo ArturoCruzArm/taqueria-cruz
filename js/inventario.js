@@ -47,7 +47,7 @@ const Inventario = {
       alertEl.innerHTML = `
         <div class="inv-alerta">
           ⚠️ <strong>${bajos.length} ingrediente(s) con stock bajo:</strong>
-          ${bajos.map(i => `<span class="inv-alerta-item">${i.nombre} (${i.stock_actual} ${i.unidad})</span>`).join(', ')}
+          ${bajos.map(i => `<span class="inv-alerta-item">${App.esc(i.nombre)} (${i.stock_actual} ${App.esc(i.unidad)})</span>`).join(', ')}
         </div>
       `;
     }
@@ -83,22 +83,24 @@ const Inventario = {
 
     el.innerHTML = catNames.map(cat => `
       <div class="inv-cat-section">
-        <h3 class="inv-cat-title">${cat.charAt(0).toUpperCase() + cat.slice(1)}</h3>
+        <h3 class="inv-cat-title">${App.esc(cat.charAt(0).toUpperCase() + cat.slice(1))}</h3>
         <table class="corte-table">
           <thead><tr><th>Ingrediente</th><th>Stock</th><th>Mín.</th><th>Costo</th><th></th></tr></thead>
           <tbody>
             ${cats[cat].map(i => {
               const bajo = i.stock_actual <= i.stock_minimo && i.stock_minimo > 0;
+              const nombre = i.nombre.replace(/'/g, "\\'");
+              const unidad = i.unidad.replace(/'/g, "\\'");
               return `
                 <tr class="${bajo ? 'inv-bajo' : ''}">
-                  <td>${i.nombre}</td>
-                  <td><strong>${i.stock_actual}</strong> ${i.unidad}</td>
-                  <td>${i.stock_minimo} ${i.unidad}</td>
+                  <td>${App.esc(i.nombre)}</td>
+                  <td><strong>${i.stock_actual}</strong> ${App.esc(i.unidad)}</td>
+                  <td>${i.stock_minimo} ${App.esc(i.unidad)}</td>
                   <td>$${parseFloat(i.costo_unitario || 0).toFixed(1)}</td>
                   <td>
-                    <button class="btn btn-sm btn-success" onclick="Inventario.registrarCompra('${i.id}', '${i.nombre}', '${i.unidad}')">+ Compra</button>
-                    <button class="btn btn-sm btn-warning" onclick="Inventario.registrarMerma('${i.id}', '${i.nombre}', '${i.unidad}')">Merma</button>
-                    <button class="btn btn-sm btn-outline" onclick="Inventario.registrarAjuste('${i.id}', '${i.nombre}', '${i.unidad}')">Ajuste</button>
+                    <button class="btn btn-sm btn-success" onclick="Inventario.registrarCompra('${i.id}', '${nombre}', '${unidad}')">+ Compra</button>
+                    <button class="btn btn-sm btn-warning" onclick="Inventario.registrarMerma('${i.id}', '${nombre}', '${unidad}')">Merma</button>
+                    <button class="btn btn-sm btn-outline" onclick="Inventario.registrarAjuste('${i.id}', '${nombre}', '${unidad}')">Ajuste</button>
                     <button class="btn btn-sm btn-outline" onclick="Inventario.editarIngrediente('${i.id}')">✏️</button>
                   </td>
                 </tr>
@@ -128,7 +130,7 @@ const Inventario = {
         return `
           <div class="inv-receta-card">
             <div class="inv-receta-header">
-              <strong>${p.nombre}</strong> — $${parseFloat(p.precio).toFixed(0)}
+              <strong>${App.esc(p.nombre)}</strong> — $${parseFloat(p.precio).toFixed(0)}
               <button class="btn btn-sm btn-outline" onclick="Inventario.agregarAReceta('${p.id}', '${p.nombre.replace(/'/g,"\\'")}')">+ Ingrediente</button>
             </div>
             ${prodRecetas.length ? `
@@ -137,7 +139,7 @@ const Inventario = {
                   const ing = ingMap[r.ingrediente_id];
                   return ing ? `
                     <li>
-                      ${r.cantidad} ${ing.unidad} de <strong>${ing.nombre}</strong>
+                      ${r.cantidad} ${App.esc(ing.unidad)} de <strong>${App.esc(ing.nombre)}</strong>
                       <button class="btn-remove" onclick="Inventario.quitarDeReceta('${r.id}')">✕</button>
                     </li>
                   ` : '';
@@ -177,10 +179,10 @@ const Inventario = {
               <tr>
                 <td style="font-size:.8rem">${fecha.toLocaleDateString('es-MX', {day:'numeric',month:'short'})} ${fecha.toLocaleTimeString('es-MX', {hour:'2-digit',minute:'2-digit'})}</td>
                 <td>${tipoLabel[m.tipo] || m.tipo}</td>
-                <td>${ing?.nombre || '?'}</td>
-                <td class="${m.cantidad > 0 ? 'inv-positivo' : 'inv-negativo'}">${m.cantidad > 0 ? '+' : ''}${m.cantidad} ${u}</td>
-                <td style="font-size:.8rem;color:var(--text2)">${m.stock_antes != null ? m.stock_antes : '?'} → ${m.stock_despues != null ? m.stock_despues : '?'} ${u}</td>
-                <td style="font-size:.8rem;color:var(--text2)">${m.notas || ''}</td>
+                <td>${App.esc(ing?.nombre || '?')}</td>
+                <td class="${m.cantidad > 0 ? 'inv-positivo' : 'inv-negativo'}">${m.cantidad > 0 ? '+' : ''}${m.cantidad} ${App.esc(u)}</td>
+                <td style="font-size:.8rem;color:var(--text2)">${m.stock_antes != null ? m.stock_antes : '?'} → ${m.stock_despues != null ? m.stock_despues : '?'} ${App.esc(u)}</td>
+                <td style="font-size:.8rem;color:var(--text2)">${App.esc(m.notas || '')}</td>
               </tr>
             `;
           }).join('')}
@@ -419,9 +421,9 @@ const Inventario = {
           <tbody>
             ${pronostico.map(p => `
               <tr class="${parseFloat(p.diasStock) < 2 ? 'inv-bajo' : ''}">
-                <td>${p.nombre}</td>
-                <td>${p.stock_actual} ${p.unidad}</td>
-                <td>${p.consumoDiario} ${p.unidad}</td>
+                <td>${App.esc(p.nombre)}</td>
+                <td>${p.stock_actual} ${App.esc(p.unidad)}</td>
+                <td>${p.consumoDiario} ${App.esc(p.unidad)}</td>
                 <td><strong>${p.diasStock}</strong> días</td>
                 <td>${p.pedirSemana > 0 ? `<strong>${p.pedirSemana} ${p.unidad}</strong>` : '✓'}</td>
                 <td>${p.pedirSemana > 0 ? '$' + p.costoSemana : '—'}</td>

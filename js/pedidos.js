@@ -298,7 +298,7 @@ const Pedidos = {
           return `
             <div class="solic-card" style="${urgente ? 'border-left:3px solid var(--warning)' : ''}">
               <div class="solic-header">
-                <span class="solic-tipo">${c.tipo_pedido === 'domicilio' ? '🛵' : '🛍️'} ${c.nombre_cliente || 'Cliente'}</span>
+                <span class="solic-tipo">${c.tipo_pedido === 'domicilio' ? '🛵' : '🛍️'} ${App.esc(c.nombre_cliente || 'Cliente')}</span>
                 <span class="solic-time" style="${urgente ? 'color:var(--warning);font-weight:700' : ''}">
                   ${hora} ${pasado ? '(pasado)' : urgente ? `(${mins} min)` : ''}
                 </span>

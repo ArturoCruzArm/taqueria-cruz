@@ -128,8 +128,8 @@ const Desempeno = {
           <div class="desemp-rank">${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '#' + (i + 1)}</div>
           <div class="desemp-avatar">${u.avatar || '👤'}</div>
           <div class="desemp-info">
-            <div class="desemp-nombre">${u.nombre}</div>
-            <div class="desemp-rol">${u.rol || ''}</div>
+            <div class="desemp-nombre">${App.esc(u.nombre)}</div>
+            <div class="desemp-rol">${App.esc(u.rol || '')}</div>
           </div>
           <div class="desemp-stats">
             <div class="desemp-stat">
