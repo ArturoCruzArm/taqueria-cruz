@@ -114,7 +114,7 @@ const Corte = {
 
       <h2 style="margin:1.5rem 0 .8rem;">Historial de Pedidos</h2>
       <table class="corte-table">
-        <thead><tr><th>#</th><th>Mesa</th><th>Total</th><th>Hora</th></tr></thead>
+        <thead><tr><th>#</th><th>Mesa</th><th>Total</th><th>Hora</th><th></th></tr></thead>
         <tbody>
           ${todasOrdenes.map(o => `
             <tr>
@@ -122,6 +122,7 @@ const Corte = {
               <td>${o.mesa || 'Llevar'}</td>
               <td>$${parseFloat(o.total).toFixed(0)}</td>
               <td>${new Date(o.cobrada_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</td>
+              <td>${o.cuenta_id ? `<button class="btn btn-sm btn-outline" onclick="Cobrar.imprimirTicketCerrado('${o.cuenta_id}')">🖨️</button>` : ''}</td>
             </tr>
           `).join('')}
         </tbody>

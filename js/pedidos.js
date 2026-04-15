@@ -92,6 +92,8 @@ const Pedidos = {
           <div class="pedido-time">${hora}</div>
           <div class="pedido-total">$${total.toFixed(0)} ${metodoIcon[c.metodo_pago] || ''}</div>
           ${c.descuento > 0 ? `<div style="font-size:.75rem;color:var(--text2)">Desc: -$${parseFloat(c.descuento).toFixed(0)}</div>` : ''}
+          <button class="btn btn-sm btn-outline" style="margin-top:6px"
+            onclick="Cobrar.imprimirTicketCerrado('${c.id}')">🖨️ Reimprimir</button>
         </div>
       `;
     });

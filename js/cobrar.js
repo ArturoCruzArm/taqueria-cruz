@@ -294,6 +294,81 @@ const Cobrar = {
     if (header) header.style.display = 'none';
   },
 
+  async imprimirTicketCerrado(cuentaId) {
+    if (!cuentaId) return;
+    try {
+      App.toast('Cargando ticket...');
+      const [cuentaArr, ordenes] = await Promise.all([
+        SB.get('taq_cuentas', `id=eq.${cuentaId}`),
+        SB.getN('taq_ordenes', `cuenta_id=eq.${cuentaId}&estado=neq.cancelada&order=created_at`)
+      ]);
+      if (!cuentaArr.length) { App.toast('Cuenta no encontrada', 'error'); return; }
+      const cuenta = cuentaArr[0];
+
+      let items = [];
+      if (ordenes.length) {
+        items = await SB.get('taq_orden_items', `orden_id=in.(${ordenes.map(o => o.id).join(',')})&order=created_at`);
+      }
+
+      const total   = parseFloat(cuenta.total || 0);
+      const desc    = parseFloat(cuenta.descuento || 0);
+      const negocio = Auth.negocio?.nombre || 'Taquería';
+      const fecha   = new Date(cuenta.cobrada_at || Date.now()).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
+      const metodos = { efectivo: 'Efectivo 💵', tarjeta: 'Tarjeta 💳', transferencia: 'Transferencia 📱' };
+
+      const rows = items.map(i => `
+        <tr>
+          <td>${i.cantidad}</td>
+          <td>${i.nombre_producto}${i.notas ? '<br><small>' + i.notas + '</small>' : ''}</td>
+          <td class="r">$${(i.cantidad * parseFloat(i.precio_unitario || 0)).toFixed(0)}</td>
+        </tr>`).join('');
+
+      const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+        * { box-sizing: border-box; }
+        body { font-family: monospace; font-size: 12px; width: 80mm; margin: 0 auto; padding: 8px; color: #000; }
+        h2 { text-align: center; margin: 0 0 2px; font-size: 14px; }
+        .sub { text-align: center; color: #555; font-size: 10px; margin-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+        th { text-align: left; border-bottom: 1px solid #000; padding: 2px 2px; font-size: 11px; }
+        td { padding: 2px 2px; font-size: 11px; vertical-align: top; }
+        .r { text-align: right; }
+        .dashed { border-top: 1px dashed #000; margin: 8px 0; }
+        .total { font-size: 14px; font-weight: bold; text-align: right; }
+        .metodo { font-size: 10px; text-align: right; color: #444; }
+        .footer { text-align: center; margin-top: 14px; font-size: 10px; color: #666; border-top: 1px solid #000; padding-top: 6px; }
+        @media print { body { margin: 0; } }
+      </style></head><body>
+        <h2>${negocio}</h2>
+        <div class="sub">
+          ${cuenta.nombre_cliente || cuenta.mesa || 'Cliente'}<br>
+          ${fecha}
+          ${ordenes.length > 1 ? ' · ' + ordenes.length + ' pedidos' : ''}
+        </div>
+        <table>
+          <thead><tr><th>Cant</th><th>Producto</th><th class="r">Total</th></tr></thead>
+          <tbody>${rows || '<tr><td colspan="3">Sin detalle</td></tr>'}</tbody>
+        </table>
+        <div class="dashed"></div>
+        ${desc > 0 ? `<div class="metodo">Descuento: -$${desc.toFixed(0)}</div>` : ''}
+        <div class="total">TOTAL: $${total.toFixed(0)}</div>
+        <div class="metodo">${metodos[cuenta.metodo_pago] || cuenta.metodo_pago || 'Efectivo'}</div>
+        <div class="footer">¡Gracias por su visita!</div>
+        <script>window.onload = () => { window.print(); }<\/script>
+      </body></html>`;
+
+      const win = window.open('', '_blank', 'width=370,height=580');
+      if (!win) {
+        App.toast('Activa ventanas emergentes en tu navegador para imprimir', 'error');
+        return;
+      }
+      win.document.write(html);
+      win.document.close();
+    } catch (e) {
+      ErrorLogger?.capture(e, 'Cobrar.imprimirTicketCerrado');
+      App.toast('Error al cargar ticket: ' + e.message, 'error');
+    }
+  },
+
   async getTurnoActivo() {
     if (!Auth.user?.id) return null;
     const turnos = await SB.getN('taq_turnos', `usuario_id=eq.${Auth.user.id}&estado=eq.activo&limit=1`);
