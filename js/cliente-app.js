@@ -324,7 +324,7 @@ const ClienteApp = {
       </div>
       <div class="cli-estado">
         <div class="cli-estado-icon">⏳</div>
-        <h2>Pedido enviado, ${nombre}</h2>
+        <h2>Pedido enviado, ${this.esc(nombre)}</h2>
         <p>El mesero confirmará tu pedido en un momento.<br>Permanece en tu lugar.</p>
       </div>
     `;
@@ -379,7 +379,7 @@ const ClienteApp = {
         <div class="cli-topbar">
           <div>
             <div class="cli-negocio">${this.negocio.nombre}</div>
-            <div class="cli-mesa">Hola, ${this.sesion.nombre}</div>
+            <div class="cli-mesa">Hola, ${this.esc(this.sesion.nombre)}</div>
           </div>
         </div>
         <div class="cli-cuenta">
@@ -387,7 +387,7 @@ const ClienteApp = {
           <div class="cli-cuenta-items">
             ${items.map(i => `
               <div class="cli-cuenta-item">
-                <span>${i.cantidad}x ${i.nombre_producto}${i.notas ? ` <small>(${i.notas})</small>` : ''}</span>
+                <span>${i.cantidad}x ${this.esc(i.nombre_producto)}${i.notas ? ` <small>(${this.esc(i.notas)})</small>` : ''}</span>
                 <div style="text-align:right">
                   <div>$${(i.cantidad * parseFloat(i.precio_unitario)).toFixed(0)}</div>
                   <div class="cli-cuenta-item-estado ${i.estado || ''}">${estadoLabel[i.estado] || 'Preparando...'}</div>
@@ -577,6 +577,14 @@ const ClienteApp = {
     return id;
   },
 
+  esc(str) {
+    return String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  },
+
   toast(msg) {
     const t = document.getElementById('cliToast');
     t.textContent = msg;
@@ -623,7 +631,7 @@ const ClienteApp = {
         <div class="cli-topbar">
           <div>
             <div class="cli-negocio">${negocio}</div>
-            <div class="cli-mesa">🧾 Cuenta de ${cuenta.nombre_cliente || 'Cliente'}</div>
+            <div class="cli-mesa">🧾 Cuenta de ${this.esc(cuenta.nombre_cliente || 'Cliente')}</div>
           </div>
         </div>
         <div style="padding:16px;max-width:480px;margin:0 auto">
@@ -639,8 +647,8 @@ const ClienteApp = {
               ${items.map(i => `
                 <tr style="border-bottom:1px solid #f0f0f0">
                   <td style="padding:8px 4px">
-                    ${i.nombre_producto}
-                    ${i.notas ? `<br><small style="color:#888">${i.notas}</small>` : ''}
+                    ${this.esc(i.nombre_producto)}
+                    ${i.notas ? `<br><small style="color:#888">${this.esc(i.notas)}</small>` : ''}
                     ${i.estado === 'entregado' ? ' <small style="color:#22c55e">✓</small>' : i.estado === 'listo' ? ' <small>🍽️</small>' : ''}
                   </td>
                   <td style="text-align:center;padding:8px 4px">${i.cantidad}</td>

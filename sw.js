@@ -1,5 +1,5 @@
 // Service Worker — Taquería Cruz
-const CACHE = 'taqueria-v37';
+const CACHE = 'taqueria-v38';
 const ASSETS = [
   '/',
   '/index.html',
