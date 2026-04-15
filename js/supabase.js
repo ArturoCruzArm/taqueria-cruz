@@ -234,6 +234,8 @@ const SB = {
     });
     if (!r.ok) {
       const err = await r.json().catch(() => ({}));
+      // Loguear errores de RPC igual que errores de BD
+      ErrorLogger?.dbError(`rpc/${fn}`, JSON.stringify(params).slice(0, 300), r.status, err.message || err.hint || err.details);
       throw new Error(err.message || `RPC ${fn} falló: ${r.status}`);
     }
     return r.json();

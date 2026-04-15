@@ -216,6 +216,7 @@ const Cobrar = {
       App.toast('Cobrado $' + this.total.toFixed(0));
       location.hash = 'pedidos';
     } catch (e) {
+      ErrorLogger?.capture(e, 'Cobrar.cobrar');
       App.toast('Error al cobrar: ' + e.message, 'error');
       if (btn) btn.disabled = false;
       this._working = false;
