@@ -79,8 +79,8 @@ const ClienteApp = {
 
   async renderMenu() {
     const [cats, prods] = await Promise.all([
-      SB.getN('taq_categorias', 'activa=eq.true&order=orden'),
-      SB.getN('taq_productos', 'disponible=eq.true&order=orden')
+      SB.getN('taq_categorias', 'activa=eq.true&order=orden&limit=200'),
+      SB.getN('taq_productos', 'disponible=eq.true&order=orden&limit=500')
     ]);
 
     const root = document.getElementById('cli-root');

@@ -243,7 +243,7 @@ const Cobrar = {
 
   async descontarInventario() {
     try {
-      const recetas = await SB.getN('taq_recetas', '');
+      const recetas = await SB.getN('taq_recetas', 'limit=2000');
       if (!recetas.length) return;
 
       // Acumular consumo total por ingrediente (varios items pueden usar el mismo)

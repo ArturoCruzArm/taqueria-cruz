@@ -5,9 +5,9 @@ const Inventario = {
 
   async render(el) {
     const [ingredientes, productos, recetas] = await Promise.all([
-      SB.getN('taq_ingredientes', 'activo=eq.true&order=categoria,nombre'),
-      SB.getN('taq_productos', 'order=nombre'),
-      SB.getN('taq_recetas', '')
+      SB.getN('taq_ingredientes', 'activo=eq.true&order=categoria,nombre&limit=500'),
+      SB.getN('taq_productos', 'order=nombre&limit=500'),
+      SB.getN('taq_recetas', 'limit=2000')
     ]);
 
     // Agrupar ingredientes por categoría
@@ -357,11 +357,11 @@ const Inventario = {
     hace7.setDate(hace7.getDate() - 7);
     const desde = hace7.toISOString();
 
-    const ordenesCobradas = await SB.getN('taq_ordenes', `estado=eq.cobrada&cobrada_at=gte.${desde}`);
+    const ordenesCobradas = await SB.getAllN('taq_ordenes', `estado=eq.cobrada&cobrada_at=gte.${desde}&select=id,cobrada_at`);
     let items = [];
     if (ordenesCobradas.length) {
       const ids = ordenesCobradas.map(o => o.id);
-      items = await SB.get('taq_orden_items', `orden_id=in.(${ids.join(',')})&order=created_at`);
+      items = await SB.getAll('taq_orden_items', `orden_id=in.(${ids.join(',')})&order=created_at`);
     }
 
     // Contar productos vendidos por día

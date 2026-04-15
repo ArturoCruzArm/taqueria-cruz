@@ -304,8 +304,8 @@ const App = {
 
   async loadMenu() {
     const [cats, prods] = await Promise.all([
-      SB.getN('taq_categorias', 'activa=eq.true&order=orden'),
-      SB.getN('taq_productos', 'disponible=eq.true&order=orden')
+      SB.getN('taq_categorias', 'activa=eq.true&order=orden&limit=200'),
+      SB.getN('taq_productos', 'disponible=eq.true&order=orden&limit=500')
     ]);
     // Solo actualizar si llegaron datos reales — evita borrar el menú por un error de red
     if (cats.length)  this.menuData.categorias = cats;

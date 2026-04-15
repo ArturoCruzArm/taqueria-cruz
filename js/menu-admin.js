@@ -4,8 +4,8 @@
 const MenuAdmin = {
   async render(el) {
     const [cats, prods] = await Promise.all([
-      SB.getN('taq_categorias', 'order=orden'),
-      SB.getN('taq_productos', 'order=orden')
+      SB.getN('taq_categorias', 'order=orden&limit=200'),
+      SB.getN('taq_productos', 'order=orden&limit=500')
     ]);
 
     el.innerHTML = `

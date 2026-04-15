@@ -260,10 +260,10 @@ const Pedidos = {
   },
 
   async load() {
-    // Cargar cuentas abiertas
-    const cuentas = await SB.getN('taq_cuentas', 'estado=eq.abierta&order=created_at.desc');
+    // Cargar cuentas abiertas (activas en el momento — bounded, nunca cientos)
+    const cuentas = await SB.getN('taq_cuentas', 'estado=eq.abierta&order=created_at.desc&limit=200');
     // También cargar órdenes sin cuenta (compatibilidad con pedidos viejos)
-    const ordenesSinCuenta = await SB.getN('taq_ordenes', 'estado=neq.cobrada&estado=neq.cancelada&cuenta_id=is.null&order=created_at.desc');
+    const ordenesSinCuenta = await SB.getN('taq_ordenes', 'estado=neq.cobrada&estado=neq.cancelada&cuenta_id=is.null&order=created_at.desc&limit=200');
 
     const container = document.getElementById('pedidos-list');
     if (!container) return;
@@ -279,11 +279,11 @@ const Pedidos = {
     let todasOrdenes = [], todosItems = [];
     if (cuentas.length) {
       const cuentaIds = cuentas.map(c => c.id).join(',');
-      todasOrdenes = await SB.getN('taq_ordenes', `cuenta_id=in.(${cuentaIds})&estado=neq.cancelada&order=created_at`);
+      todasOrdenes = await SB.getN('taq_ordenes', `cuenta_id=in.(${cuentaIds})&estado=neq.cancelada&order=created_at&limit=500`);
     }
     if (todasOrdenes.length) {
       const ordenIds = todasOrdenes.map(o => o.id).join(',');
-      todosItems = await SB.get('taq_orden_items', `orden_id=in.(${ordenIds})&order=created_at`);
+      todosItems = await SB.get('taq_orden_items', `orden_id=in.(${ordenIds})&order=created_at&limit=1000`);
     }
 
     // Renderizar cuentas abiertas

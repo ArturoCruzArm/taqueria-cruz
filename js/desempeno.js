@@ -51,9 +51,10 @@ const Desempeno = {
 
     const [usuarios, actividad, cuentasCobradas] = await Promise.all([
       SB.getN('taq_usuarios', 'activo=eq.true&order=nombre'),
-      SB.getN('taq_actividad', `created_at=gte.${desde}&order=created_at.desc`),
+      // getAllN pagina de a 1000 — puede superar ese límite en períodos largos
+      SB.getAllN('taq_actividad', `created_at=gte.${desde}&order=created_at.desc`),
       // Cobros reales desde taq_cuentas — fuente de verdad, no depende de audit logs
-      SB.getN('taq_cuentas', `estado=eq.cobrada&cobrada_at=gte.${desde}&select=cobrada_por,total`)
+      SB.getAllN('taq_cuentas', `estado=eq.cobrada&cobrada_at=gte.${desde}&select=cobrada_por,total`)
     ]);
 
     if (!actividad.length && !cuentasCobradas.length) {

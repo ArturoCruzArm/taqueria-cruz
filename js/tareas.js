@@ -72,7 +72,7 @@ const Tareas = {
     if (estado === 'completada') {
       query += 'completado_at.desc&limit=30';
     } else {
-      query += 'prioridad.desc,created_at.asc';
+      query += 'prioridad.desc,created_at.asc&limit=200';
     }
 
     const tareas = await SB.getN('taq_tareas', query);

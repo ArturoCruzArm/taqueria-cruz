@@ -91,6 +91,41 @@ const SB = {
     return this.get(table, this.nq(query));
   },
 
+  /**
+   * Pagina automáticamente en bloques de 1000 hasta maxRows.
+   * Usar cuando la consulta puede devolver >1000 filas (reportes, agregados).
+   */
+  async getAll(table, query, maxRows = 5000) {
+    const PAGE = 1000;
+    let all = [];
+    let offset = 0;
+    while (offset < maxRows) {
+      const end = Math.min(offset + PAGE - 1, maxRows - 1);
+      const hdrs = { ...this.headers(), 'Range-Unit': 'items', Range: `${offset}-${end}` };
+      try {
+        const r = await fetch(`${this.url}/rest/v1/${table}?${query || ''}`, { headers: hdrs });
+        if (!r.ok) {
+          const err = await r.json().catch(() => ({}));
+          ErrorLogger?.dbError(table, query, r.status, err.message);
+          break;
+        }
+        const page = await r.json();
+        if (!Array.isArray(page) || !page.length) break;
+        all = all.concat(page);
+        if (page.length < PAGE) break; // última página
+        offset += PAGE;
+      } catch (e) {
+        ErrorLogger?.dbError(table, query, 0, e.message);
+        break;
+      }
+    }
+    return all;
+  },
+
+  async getAllN(table, query, maxRows = 5000) {
+    return this.getAll(table, this.nq(query), maxRows);
+  },
+
   async insertN(table, data) {
     // Inyecta negocio_id automáticamente
     if (Array.isArray(data)) {

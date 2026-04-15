@@ -171,7 +171,7 @@ const Equipo = {
   async desactivar(id, nombre) {
     try {
       // No permitir desactivar al último admin
-      const admins = await SB.getN('taq_usuarios', 'activo=eq.true');
+      const admins = await SB.getN('taq_usuarios', 'activo=eq.true&limit=200');
       const adminRoles = this._roles.filter(r => r.es_admin).map(r => r.id);
       const adminsActivos = admins.filter(u => adminRoles.includes(u.rol_id) && u.id !== id);
       if (adminsActivos.length === 0) {
