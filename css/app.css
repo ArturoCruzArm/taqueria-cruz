@@ -15,6 +15,7 @@
   --danger: #e74c3c;
   --text: #eee;
   --text2: #aab;
+  --muted: #aab;          /* alias de text2 — evita referencias rotas */
   --border: rgba(255,255,255,.08);
   --radius: 12px;
   --shadow: 0 4px 20px rgba(0,0,0,.3);
@@ -1109,4 +1110,200 @@ body {
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .bottom-nav { padding-bottom: calc(6px + env(safe-area-inset-bottom)); }
   #main { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+}
+
+/* ====================================================
+   RESPONSIVE — Celulares y tabletas
+   Mobile-first: los cambios aquí ajustan casos edge.
+   ==================================================== */
+
+/* ── Inputs: font-size 16px previene zoom en iOS ── */
+input[type="text"],
+input[type="number"],
+input[type="tel"],
+input[type="email"],
+input[type="password"],
+textarea,
+select {
+  font-size: max(16px, 1rem);
+}
+/* Excepción: inputs muy chicos donde el tamaño grande rompe el layout */
+.nota-input,
+.audit-filtros select,
+.inv-tab,
+.pago-btn {
+  font-size: 16px;
+}
+
+/* ── Tablas: scroll horizontal en pantallas angostas ── */
+@media (max-width: 640px) {
+  .corte-table,
+  .admin-table,
+  .cobrar-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: var(--radius);
+  }
+  /* Que las celdas no se aplasten tanto */
+  .corte-table th, .corte-table td,
+  .admin-table th, .admin-table td,
+  .cobrar-table th, .cobrar-table td {
+    white-space: nowrap;
+  }
+  /* La tabla de auditoría errores también */
+  #audit-errores table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+  }
+  #audit-errores td, #audit-errores th {
+    white-space: nowrap;
+  }
+}
+
+/* ── Pantallas muy pequeñas (≤ 359px — Android gama baja, iPhone SE 1ª gen) ── */
+@media (max-width: 359px) {
+  /* Nav: reducir para que quepan 6 items en 320px */
+  .nav-item {
+    min-width: 42px;
+    padding: 5px 3px;
+    font-size: .58rem;
+    gap: 1px;
+  }
+  .nav-item .nav-icon { font-size: 1.2rem; }
+
+  #main { padding: 8px 8px 76px; }
+
+  /* Teclado PIN más compacto */
+  .pin-pad { max-width: 220px; gap: 7px; }
+  .pin-key  { height: 52px; font-size: 1.2rem; }
+
+  /* Productos: 2 columnas forzadas */
+  .productos-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .prod-name  { font-size: .8rem; }
+  .prod-price { font-size: .78rem; }
+  .producto-btn { padding: 10px 6px; }
+
+  /* Corte: stats 2 columnas */
+  .corte-resumen { grid-template-columns: repeat(2, 1fr); }
+  .corte-stat-value { font-size: 1.2rem; }
+
+  /* Auditoría: filtros apilados de 2 en 2 */
+  .audit-filtros { display: grid; grid-template-columns: 1fr 1fr; }
+
+  /* Desempeño: columnas más angostas */
+  .desemp-card { grid-template-columns: 24px 32px 1fr; gap: 4px 8px; }
+  .desemp-rank  { font-size: 1rem; }
+  .desemp-avatar { font-size: 1.3rem; }
+  .desemp-val   { font-size: 1rem; }
+  .desemp-stats { gap: 8px; }
+
+  /* Equipo: acciones apiladas */
+  .equipo-card { flex-wrap: wrap; }
+  .equipo-actions { width: 100%; justify-content: flex-end; }
+
+  /* Header: título más chico */
+  .view-header h1 { font-size: 1.1rem; }
+
+  /* Botones: un poco más chicos */
+  .btn { padding: 9px 12px; font-size: .85rem; }
+  .btn-sm { padding: 5px 10px; font-size: .75rem; }
+
+  /* Cobrar: inputs touch-friendly */
+  .pago-input { font-size: 1.1rem; padding: 10px; }
+  .pago-metodo-btn { font-size: .75rem; padding: 7px 3px; }
+}
+
+/* ── Teléfonos estándar (360–599px) ── */
+@media (min-width: 360px) and (max-width: 599px) {
+  /* Productos: mínimo 130px para que quepan cómodamente */
+  .productos-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+
+  /* Ticket panel: altura razonable en mobile sin saturar la pantalla */
+  .ticket-panel { max-height: 50vh; }
+
+  /* Corte: stats en 2 columnas en pantallas muy angostas */
+  @media (max-width: 430px) {
+    .corte-resumen { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* Auditoría filtros: grid 2x2 en vez de fila de 4 */
+  @media (max-width: 480px) {
+    .audit-filtros { display: grid; grid-template-columns: 1fr 1fr; }
+    .audit-filtros select { min-width: 0; }
+  }
+}
+
+/* ── Tabletas pequeñas (600px–899px) ── */
+@media (min-width: 600px) and (max-width: 899px) {
+  #main { padding: 16px; padding-bottom: 88px; }
+
+  .pedidos-grid  { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .cocina-grid   { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .productos-grid{ grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .corte-resumen { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+
+  /* Nuevo pedido: 2 paneles lado a lado desde 600px */
+  .nuevo-pedido-layout { grid-template-columns: 1fr 300px; }
+  .ticket-panel { max-height: calc(100vh - 140px); }
+
+  /* Cobrar: 2 paneles */
+  .cobrar-layout { grid-template-columns: 1fr 300px; }
+
+  /* Nav: iconos más grandes en tablet */
+  .nav-item { min-width: 70px; padding: 7px 10px; font-size: .72rem; }
+  .nav-item .nav-icon { font-size: 1.4rem; }
+
+  /* Desempeño: stats con más espacio */
+  .desemp-stats { gap: 18px; }
+
+  /* Auditoría: filtros en una fila */
+  .audit-filtros { flex-wrap: nowrap; }
+  .audit-filtros select { min-width: 110px; }
+}
+
+/* ── Tabletas y pantallas grandes (≥ 900px) ── */
+@media (min-width: 900px) {
+  #main { padding: 20px; padding-bottom: 90px; }
+
+  .pedidos-grid  { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+  .cocina-grid   { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+  .productos-grid{ grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+  .corte-resumen { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+
+  .nuevo-pedido-layout { grid-template-columns: 1fr 340px; }
+  .cobrar-layout       { grid-template-columns: 1fr 340px; }
+  .ticket-panel { max-height: calc(100vh - 130px); }
+
+  /* Desempeño: tarjetas más anchas */
+  .desemp-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 10px; }
+  .desemp-stats { gap: 20px; }
+
+  /* Equipo: lista más compacta */
+  .equipo-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 8px; }
+
+  /* Nav: versión tablet con más aire */
+  .nav-item { min-width: 80px; }
+  .nav-item .nav-icon { font-size: 1.5rem; }
+  .bottom-nav { padding: 8px 0 env(safe-area-inset-bottom, 8px); }
+}
+
+/* ── Nav: si hay ≥ 6 items, usar scroll horizontal en vez de apretarlos ── */
+@media (max-width: 400px) {
+  .bottom-nav {
+    justify-content: flex-start;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 0;
+  }
+  .bottom-nav::-webkit-scrollbar { display: none; }
+  .nav-item { flex-shrink: 0; }
+}
+
+/* ── Toque: evitar doble-tap zoom en botones ── */
+button, a, label, .producto-btn, .pago-btn, .pin-key {
+  touch-action: manipulation;
 }

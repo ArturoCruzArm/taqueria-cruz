@@ -23,8 +23,19 @@ body {
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
-  max-width: 480px;
+  /* Hasta 640px centrado tipo móvil; tablets usan todo el ancho */
+  max-width: 640px;
   margin: 0 auto;
+}
+
+/* Inputs: prevenir zoom en iOS */
+input, select, textarea {
+  font-size: max(16px, 1rem);
+}
+
+/* Touch: sin double-tap zoom */
+button, a, label {
+  touch-action: manipulation;
 }
 
 /* ── TOP BAR ── */
@@ -287,3 +298,27 @@ body {
   z-index: 999;
 }
 .cli-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── Tablet (≥ 480px): aprovechar el espacio extra ── */
+@media (min-width: 480px) {
+  .cli-prods { padding: 0 20px 100px; }
+  .cli-prod-nombre { font-size: 1rem; }
+  .cli-prod-precio { font-size: 1.05rem; }
+  .cli-qty-btn { width: 36px; height: 36px; }
+
+  /* Carrito: no ocupa todo el viewport */
+  .cli-carrito-panel { max-height: 70vh; border-radius: var(--radius); }
+  .cli-carrito-overlay { padding: 40px 20px; align-items: flex-end; }
+}
+
+/* ── Pantallas pequeñas (≤ 350px) ── */
+@media (max-width: 350px) {
+  .cli-topbar { padding: 8px 12px; }
+  .cli-negocio { font-size: .9rem; }
+  .cli-cats { padding: 8px 12px; gap: 6px; }
+  .cli-cat-btn { padding: 6px 12px; font-size: .8rem; }
+  .cli-prods { padding: 0 12px 90px; }
+  .cli-prod-card { padding: 10px 0; }
+  .cli-carrito-fab { padding: 12px 16px; font-size: .9rem; bottom: 16px; right: 12px; }
+  .cli-btn { padding: 12px; font-size: .95rem; }
+}
