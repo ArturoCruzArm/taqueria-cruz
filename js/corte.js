@@ -23,7 +23,7 @@ const Corte = {
     // Sin turno activo: mostrar ventas de hoy y permitir corte igual
     const desde = App.inicioDia(App.hoy());
     const ordenes = await SB.getN('taq_ordenes', `estado=eq.cobrada&cobrada_at=gte.${desde}&order=cobrada_at.desc&limit=200`);
-    const canceladas = await SB.getN('taq_ordenes', `estado=eq.cancelada&created_at=gte.${desde}&select=id`);
+    const canceladas = await SB.getN('taq_ordenes', `estado=eq.cancelada&created_at=gte.${desde}&select=id&limit=500`);
 
     let items = [];
     if (ordenes.length) {
@@ -150,7 +150,7 @@ const Corte = {
     const ordenesSinTurno = await SB.getN('taq_ordenes', `estado=eq.cobrada&cobrada_at=gte.${inicio}&turno_id=is.null&order=cobrada_at.desc&limit=500`);
     const todasOrdenes = [...ordenes, ...ordenesSinTurno];
 
-    const canceladas = await SB.getN('taq_ordenes', `estado=eq.cancelada&created_at=gte.${inicio}&select=id`);
+    const canceladas = await SB.getN('taq_ordenes', `estado=eq.cancelada&created_at=gte.${inicio}&select=id&limit=500`);
 
     let items = [];
     if (todasOrdenes.length) {

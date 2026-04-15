@@ -59,7 +59,7 @@ const Cocina = {
   },
 
   async load() {
-    const ordenes = await SB.getN('taq_ordenes', 'estado=in.(en_cocina,lista)&order=created_at');
+    const ordenes = await SB.getN('taq_ordenes', 'estado=in.(en_cocina,lista)&order=created_at&limit=200');
     const container = document.getElementById('cocina-grid');
     if (!container) return;
 
@@ -76,7 +76,7 @@ const Cocina = {
     }
 
     const ids = ordenes.map(o => o.id);
-    const items = await SB.get('taq_orden_items', `orden_id=in.(${ids.join(',')})&order=created_at`);
+    const items = await SB.get('taq_orden_items', `orden_id=in.(${ids.join(',')})&order=created_at&limit=2000`);
 
     // Sonar si llegaron items pendientes nuevos (adiciones del mesero)
     const pendientes = items.filter(i => !i.estado || i.estado === 'pendiente').length;

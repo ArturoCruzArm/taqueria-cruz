@@ -223,7 +223,7 @@ const App = {
       this.showNotif(titulo, cuerpo, 'solic-' + (payload.id || Date.now()));
 
       // Actualizar badge
-      const pendientes = await SB.getN('taq_solicitudes', 'estado=eq.pendiente&select=id');
+      const pendientes = await SB.getN('taq_solicitudes', 'estado=eq.pendiente&select=id&limit=100');
       this.updateSolicBadge(pendientes.length);
       // Toast si no está en pedidos
       if (this.currentView !== 'pedidos') {
@@ -231,7 +231,7 @@ const App = {
       }
     });
     // Badge inicial
-    SB.getN('taq_solicitudes', 'estado=eq.pendiente&select=id').then(p => this.updateSolicBadge(p.length));
+    SB.getN('taq_solicitudes', 'estado=eq.pendiente&select=id&limit=100').then(p => this.updateSolicBadge(p.length));
   },
 
   // AudioContext compartido — se crea una sola vez en el primer gesto del usuario.

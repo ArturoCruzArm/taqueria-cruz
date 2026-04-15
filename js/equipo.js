@@ -93,7 +93,7 @@ const Equipo = {
 
     try {
       // Verificar PIN único en el negocio
-      const existe = await SB.getN('taq_usuarios', `pin=eq.${pin}`);
+      const existe = await SB.getN('taq_usuarios', `pin=eq.${pin}&limit=1`);
       if (existe.length) {
         App.toast('Ese PIN ya está en uso');
         return;
@@ -135,7 +135,7 @@ const Equipo = {
       }
 
       // Verificar PIN único (excepto el mismo usuario)
-      const existe = await SB.getN('taq_usuarios', `pin=eq.${pin}&id=neq.${id}`);
+      const existe = await SB.getN('taq_usuarios', `pin=eq.${pin}&id=neq.${id}&limit=1`);
       if (existe.length) {
         App.toast('Ese PIN ya está en uso');
         return;

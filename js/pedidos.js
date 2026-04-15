@@ -121,7 +121,7 @@ const Pedidos = {
     const panel = document.getElementById('solicitudes-panel');
     if (!panel) return;
 
-    const solicitudes = await SB.getN('taq_solicitudes', 'estado=eq.pendiente&order=created_at.asc');
+    const solicitudes = await SB.getN('taq_solicitudes', 'estado=eq.pendiente&order=created_at.asc&limit=100');
 
     // Sonar si llegaron solicitudes nuevas
     if (this._lastSolicCount >= 0 && solicitudes.length > this._lastSolicCount) {

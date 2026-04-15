@@ -10,7 +10,7 @@ const NegocioAdmin = {
 
     // Código del día actual
     const hoy = App.hoy();
-    const codigos = await SB.getN('taq_codigos_dia', `fecha=eq.${hoy}`);
+    const codigos = await SB.getN('taq_codigos_dia', `fecha=eq.${hoy}&limit=1`);
     const codigoHoy = codigos.length ? codigos[0].codigo : null;
 
     el.innerHTML = `
@@ -150,7 +150,7 @@ const NegocioAdmin = {
     const codigo = String(Math.floor(100 + Math.random() * 900)); // 3 dígitos 100-999
     const hoy = App.hoy();
     try {
-      const existente = await SB.getN('taq_codigos_dia', `fecha=eq.${hoy}`);
+      const existente = await SB.getN('taq_codigos_dia', `fecha=eq.${hoy}&limit=1`);
       if (existente.length) {
         await SB.update('taq_codigos_dia', `id=eq.${existente[0].id}`, { codigo });
       } else {
