@@ -184,7 +184,15 @@ const NuevoPedido = {
       existing.cantidad++;
     } else {
       const p = App.menuData.productos.find(p => p.id === prodId);
-      if (!p) return;
+      if (!p) {
+        // El producto no está en el menú cargado en memoria — loguear y recargar
+        ErrorLogger?.capture(
+          new Error(`Producto ${prodId} no encontrado en menuData (${App.menuData.productos.length} productos cargados)`),
+          'NuevoPedido.addItem'
+        );
+        App.loadMenu().then(() => App.toast('Menú actualizado, intenta de nuevo'));
+        return;
+      }
       this.items.push({
         producto_id: p.id,
         nombre: p.nombre,

@@ -307,8 +307,9 @@ const App = {
       SB.getN('taq_categorias', 'activa=eq.true&order=orden'),
       SB.getN('taq_productos', 'disponible=eq.true&order=orden')
     ]);
-    this.menuData.categorias = cats;
-    this.menuData.productos = prods;
+    // Solo actualizar si llegaron datos reales — evita borrar el menú por un error de red
+    if (cats.length)  this.menuData.categorias = cats;
+    if (prods.length) this.menuData.productos   = prods;
 
     // Suscribirse a cambios del menú via Realtime
     this._menuSub && SB.unsubscribe(this._menuSub);
