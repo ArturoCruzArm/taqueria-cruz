@@ -128,6 +128,10 @@ const Cocina = {
             ` : ''}
             ${o.estado === 'lista' ? `
               <div class="cocina-estado-lista">✅ Listo — esperando entrega</div>
+              <button class="btn btn-outline btn-block cocina-btn" style="margin-top:6px"
+                onclick="Cocina.marcarEntregado('${o.id}')">
+                🙌 Ya entregado — quitar de cocina
+              </button>
             ` : ''}
           </div>
         </div>
@@ -216,5 +220,19 @@ const Cocina = {
 
     Auth.audit('cocinado', ordenId, tiempoCocinaSegs ? { tiempo_cocina_seg: tiempoCocinaSegs } : {});
     App.toast('¡Pedido completo! Mesero notificado');
+  },
+
+  async marcarEntregado(ordenId) {
+    try {
+      // Marcar todos los items como entregados
+      await SB.update('taq_orden_items', `orden_id=eq.${ordenId}`, { estado: 'entregado' });
+      // Regresar orden a 'abierta' para que salga de cocina pero siga activa en pedidos para cobrar
+      await SB.update('taq_ordenes', `id=eq.${ordenId}`, { estado: 'abierta' });
+      App.toast('Pedido entregado');
+      this.load();
+    } catch (e) {
+      ErrorLogger?.capture(e, 'Cocina.marcarEntregado');
+      App.toast('Error: ' + e.message, 'error');
+    }
   }
 };
