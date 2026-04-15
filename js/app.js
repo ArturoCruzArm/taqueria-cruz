@@ -409,31 +409,29 @@ const App = {
     return d.toLocaleDateString('sv-SE', { timeZone: this._tz() });
   },
 
-  inicioDia(fechaStr) {
-    const tz  = this._tz();
-    const fecha = fechaStr || this.hoy();
-    // Calcular la medianoche local expresada en UTC.
-    // Trick: formatear una fecha UTC conocida en el timezone destino,
-    // calcular el desfase, y aplicarlo a medianoche UTC.
-    const noonUTC  = new Date(`${fecha}T12:00:00Z`);
-    const localStr = new Intl.DateTimeFormat('sv-SE', {
+  // Convierte la fecha y hora del timezone local en un ISO offset usando
+  // formatToParts() — evita depender del formato de string del locale
+  // (iOS Safari sv-SE usa ':' como separador de fracción de segundos en .format()).
+  _tzOffset(fecha, tz) {
+    const noonUTC = new Date(`${fecha}T12:00:00Z`);
+    const p = new Intl.DateTimeFormat('en-US', {
       timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', second: '2-digit'
-    }).format(noonUTC).replace(' ', 'T');
-    // offset = noonUTC − cómo se ve esa hora en la zona (tratada como UTC para aritmética)
-    const offsetMs = noonUTC.getTime() - new Date(localStr + 'Z').getTime();
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+    }).formatToParts(noonUTC);
+    const get = t => p.find(x => x.type === t)?.value?.padStart(2, '0') || '00';
+    const localStr = `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}:${get('second')}`;
+    return noonUTC.getTime() - new Date(localStr + 'Z').getTime();
+  },
+
+  inicioDia(fechaStr) {
+    const fecha = fechaStr || this.hoy();
+    const offsetMs = this._tzOffset(fecha, this._tz());
     return new Date(new Date(`${fecha}T00:00:00Z`).getTime() + offsetMs).toISOString();
   },
 
   finDia(fechaStr) {
-    const tz  = this._tz();
     const fecha = fechaStr || this.hoy();
-    const noonUTC  = new Date(`${fecha}T12:00:00Z`);
-    const localStr = new Intl.DateTimeFormat('sv-SE', {
-      timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', second: '2-digit'
-    }).format(noonUTC).replace(' ', 'T');
-    const offsetMs = noonUTC.getTime() - new Date(localStr + 'Z').getTime();
+    const offsetMs = this._tzOffset(fecha, this._tz());
     return new Date(new Date(`${fecha}T23:59:59Z`).getTime() + offsetMs).toISOString();
   }
 };
