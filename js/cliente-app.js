@@ -268,7 +268,7 @@ const ClienteApp = {
     if (!codigoIngresado) { this.toast('Ingresa el código del día'); return; }
 
     // Verificar código del día
-    const hoy = new Date().toISOString().split('T')[0];
+    const hoy = new Date().toLocaleDateString('sv-SE', { timeZone: this.negocio?.config?.timezone || 'America/Mexico_City' });
     const codigos = await SB.getN('taq_codigos_dia', `fecha=eq.${hoy}&limit=1`);
     if (!codigos.length || codigos[0].codigo !== codigoIngresado) {
       this.toast('Código incorrecto — pídelo al mesero');
@@ -481,7 +481,7 @@ const ClienteApp = {
     const codigoIngresado = document.getElementById('cliCodigoAd')?.value.trim();
     if (!codigoIngresado) { this.toast('Ingresa el código del día'); return; }
 
-    const hoy = new Date().toISOString().split('T')[0];
+    const hoy = new Date().toLocaleDateString('sv-SE', { timeZone: this.negocio?.config?.timezone || 'America/Mexico_City' });
     const codigos = await SB.getN('taq_codigos_dia', `fecha=eq.${hoy}&limit=1`);
     if (!codigos.length || codigos[0].codigo !== codigoIngresado) {
       this.toast('Código incorrecto');

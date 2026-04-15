@@ -33,6 +33,13 @@ const Corte = {
 
     const totalVentas = ordenes.reduce((s, o) => s + parseFloat(o.total || 0), 0);
 
+    // Desglose por método de pago
+    const porMetodo = { efectivo: 0, tarjeta: 0, transferencia: 0 };
+    ordenes.forEach(o => {
+      const m = o.metodo_pago || 'efectivo';
+      porMetodo[m] = (porMetodo[m] || 0) + parseFloat(o.total || 0);
+    });
+
     const prodMap = {};
     items.forEach(i => {
       if (!prodMap[i.nombre_producto]) prodMap[i.nombre_producto] = { nombre: i.nombre_producto, cantidad: 0, total: 0 };
@@ -78,6 +85,22 @@ const Corte = {
           <span class="corte-stat-value">$${ordenes.length ? (totalVentas / ordenes.length).toFixed(0) : 0}</span>
         </div>
       </div>
+
+      ${ordenes.length ? `
+      <div class="corte-resumen" style="margin-top:8px">
+        <div class="corte-stat">
+          <span class="corte-stat-label">💵 Efectivo</span>
+          <span class="corte-stat-value" style="color:var(--success)">$${(porMetodo.efectivo||0).toFixed(0)}</span>
+        </div>
+        <div class="corte-stat">
+          <span class="corte-stat-label">💳 Tarjeta</span>
+          <span class="corte-stat-value">$${(porMetodo.tarjeta||0).toFixed(0)}</span>
+        </div>
+        <div class="corte-stat">
+          <span class="corte-stat-label">📱 Transferencia</span>
+          <span class="corte-stat-value">$${(porMetodo.transferencia||0).toFixed(0)}</span>
+        </div>
+      </div>` : ''}
 
       <h2 style="margin:1.5rem 0 .8rem;">Productos Vendidos</h2>
       <table class="corte-table">
@@ -138,6 +161,13 @@ const Corte = {
     const totalVentas = todasOrdenes.reduce((s, o) => s + parseFloat(o.total || 0), 0);
     const horasActivo = ((Date.now() - new Date(inicio).getTime()) / 3600000).toFixed(1);
 
+    // Desglose por método de pago
+    const porMetodo = { efectivo: 0, tarjeta: 0, transferencia: 0 };
+    todasOrdenes.forEach(o => {
+      const m = o.metodo_pago || 'efectivo';
+      porMetodo[m] = (porMetodo[m] || 0) + parseFloat(o.total || 0);
+    });
+
     const prodMap = {};
     items.forEach(i => {
       const key = i.nombre_producto;
@@ -179,6 +209,22 @@ const Corte = {
           <span class="corte-stat-value">$${todasOrdenes.length ? (totalVentas / todasOrdenes.length).toFixed(0) : 0}</span>
         </div>
       </div>
+
+      ${todasOrdenes.length ? `
+      <div class="corte-resumen" style="margin-top:8px">
+        <div class="corte-stat">
+          <span class="corte-stat-label">💵 Efectivo</span>
+          <span class="corte-stat-value" style="color:var(--success)">$${(porMetodo.efectivo||0).toFixed(0)}</span>
+        </div>
+        <div class="corte-stat">
+          <span class="corte-stat-label">💳 Tarjeta</span>
+          <span class="corte-stat-value">$${(porMetodo.tarjeta||0).toFixed(0)}</span>
+        </div>
+        <div class="corte-stat">
+          <span class="corte-stat-label">📱 Transferencia</span>
+          <span class="corte-stat-value">$${(porMetodo.transferencia||0).toFixed(0)}</span>
+        </div>
+      </div>` : ''}
 
       <h2 style="margin:1.5rem 0 .8rem;">Productos Vendidos</h2>
       <table class="corte-table">

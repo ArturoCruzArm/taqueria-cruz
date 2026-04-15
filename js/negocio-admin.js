@@ -9,7 +9,7 @@ const NegocioAdmin = {
     const mesas = await SB.getN('taq_mesas', 'order=nombre');
 
     // Código del día actual
-    const hoy = new Date().toISOString().split('T')[0];
+    const hoy = App.hoy();
     const codigos = await SB.getN('taq_codigos_dia', `fecha=eq.${hoy}`);
     const codigoHoy = codigos.length ? codigos[0].codigo : null;
 
@@ -148,7 +148,7 @@ const NegocioAdmin = {
 
   async generarCodigo() {
     const codigo = String(Math.floor(100 + Math.random() * 900)); // 3 dígitos 100-999
-    const hoy = new Date().toISOString().split('T')[0];
+    const hoy = App.hoy();
     try {
       const existente = await SB.getN('taq_codigos_dia', `fecha=eq.${hoy}`);
       if (existente.length) {

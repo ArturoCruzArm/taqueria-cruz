@@ -209,7 +209,7 @@ const Equipo = {
     const nombre = prompt('Nombre del rol:');
     if (!nombre || !nombre.trim()) return;
 
-    const vistas = ['pedidos','nuevo','cocina','cobrar','tareas','corte','inventario','menu','equipo','negocio','auditoria','desempeno'];
+    const vistas = ['pedidos','nuevo','cocina','cobrar','tareas','corte','inventario','menu','equipo','negocio','auditoria','desempeno','horarios'];
     const permisos = [];
     for (const v of vistas) {
       if (confirm(`¿El rol "${nombre.trim()}" puede acceder a "${v}"?`)) {
@@ -237,7 +237,7 @@ const Equipo = {
       const nombre = prompt('Nombre:', rol.nombre);
       if (!nombre || !nombre.trim()) return;
 
-      const vistas = ['pedidos','nuevo','cocina','cobrar','tareas','corte','inventario','menu','equipo','negocio','auditoria','desempeno'];
+      const vistas = ['pedidos','nuevo','cocina','cobrar','tareas','corte','inventario','menu','equipo','negocio','auditoria','desempeno','horarios'];
       const permisos = [];
       for (const v of vistas) {
         const tiene = (rol.permisos || []).includes(v);

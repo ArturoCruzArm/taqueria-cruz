@@ -18,6 +18,7 @@ const Pedidos = {
         <button class="btn btn-primary btn-lg" onclick="location.hash='nuevo'">+ Nuevo</button>
       </div>
       <div id="solicitudes-panel"></div>
+      <div id="programados-panel"></div>
       <div class="inv-tabs" style="margin-bottom:12px">
         <button class="inv-tab active" id="tab-activos" onclick="Pedidos.showTab('activos',this)">Activos</button>
         <button class="inv-tab" id="tab-historial" onclick="Pedidos.showTab('historial',this)">Historial hoy</button>
@@ -32,6 +33,7 @@ const Pedidos = {
     this._tab = 'activos';
     this.load();
     this.loadSolicitudes();
+    this.loadProgramados();
 
     this._sub && SB.unsubscribe(this._sub);
     this._sub = SB.subscribeN('taq_ordenes', () => {
@@ -263,6 +265,50 @@ const Pedidos = {
     this.loadSolicitudes();
   },
 
+  async loadProgramados() {
+    // Pedidos programados para hoy que aún están abiertos
+    const inicioHoy = App.inicioDia(App.hoy());
+    const finHoy = App.finDia(App.hoy());
+    const programados = await SB.getN('taq_cuentas',
+      `hora_programada=gte.${inicioHoy}&hora_programada=lte.${finHoy}&estado=eq.abierta&order=hora_programada.asc&limit=50`);
+
+    let panel = document.getElementById('programados-panel');
+    if (!panel) return;
+
+    if (!programados.length) { panel.innerHTML = ''; return; }
+
+    const ahora = Date.now();
+    const urgentes = programados.filter(c => new Date(c.hora_programada).getTime() - ahora < 30 * 60000);
+
+    panel.innerHTML = `
+      <div class="solic-panel" style="border-color:${urgentes.length ? 'var(--warning)' : 'var(--border)'}">
+        <h3 class="solic-titulo">🕐 Pedidos programados hoy (${programados.length})</h3>
+        ${programados.map(c => {
+          const hora = new Date(c.hora_programada).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+          const mins = Math.round((new Date(c.hora_programada).getTime() - ahora) / 60000);
+          const urgente = mins < 30;
+          const pasado = mins < 0;
+          return `
+            <div class="solic-card" style="${urgente ? 'border-left:3px solid var(--warning)' : ''}">
+              <div class="solic-header">
+                <span class="solic-tipo">${c.tipo_pedido === 'domicilio' ? '🛵' : '🛍️'} ${c.nombre_cliente || 'Cliente'}</span>
+                <span class="solic-time" style="${urgente ? 'color:var(--warning);font-weight:700' : ''}">
+                  ${hora} ${pasado ? '(pasado)' : urgente ? `(${mins} min)` : ''}
+                </span>
+              </div>
+              ${c.direccion ? `<div class="solic-items">📍 ${App.esc(c.direccion)}</div>` : ''}
+              ${c.telefono ? `<div class="solic-items">📞 ${App.esc(c.telefono)}</div>` : ''}
+              <div class="solic-actions">
+                <button class="btn btn-sm btn-success" onclick="location.hash='cobrar/cuenta/${c.id}'">💰 Cobrar</button>
+                <button class="btn btn-sm btn-outline" onclick="location.hash='nuevo/cuenta/${c.id}'">+ Agregar</button>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  },
+
   async load() {
     // Cargar cuentas abiertas (activas en el momento — bounded, nunca cientos)
     const cuentas = await SB.getN('taq_cuentas', 'estado=eq.abierta&order=created_at.desc&limit=200');
@@ -308,13 +354,21 @@ const Pedidos = {
 
       const estadoClass = { abierta: 'estado-abierta', en_cocina: 'estado-cocina', lista: 'estado-lista' };
       const estadoLabel = { abierta: 'Abierta', en_cocina: 'En Cocina', lista: 'Lista' };
+      const tipoIcon = { llevar: '🛍️', domicilio: '🛵' };
+      const tipoBadge = cuenta.tipo_pedido && cuenta.tipo_pedido !== 'mesa'
+        ? `<span style="font-size:.75rem;background:var(--surface2);border-radius:4px;padding:1px 6px;margin-left:4px">${tipoIcon[cuenta.tipo_pedido] || ''} ${cuenta.tipo_pedido}</span>` : '';
+      const domBadge = cuenta.tipo_pedido === 'domicilio' && cuenta.direccion
+        ? `<div style="font-size:.75rem;color:var(--muted);margin-top:2px">📍 ${App.esc(cuenta.direccion)}</div>` : '';
+      const telBadge = cuenta.tipo_pedido === 'domicilio' && cuenta.telefono
+        ? `<div style="font-size:.75rem;color:var(--muted)">📞 ${App.esc(cuenta.telefono)}</div>` : '';
 
       html += `
         <div class="pedido-card ${estadoClass[estadoGeneral] || ''}">
           <div class="pedido-header">
-            <span class="pedido-mesa">${cuenta.nombre_cliente || cuenta.mesa || 'Cliente'}</span>
+            <span class="pedido-mesa">${cuenta.nombre_cliente || cuenta.mesa || 'Cliente'}${tipoBadge}</span>
             <span class="pedido-estado">${estadoLabel[estadoGeneral] || estadoGeneral}</span>
           </div>
+          ${domBadge}${telBadge}
           <div class="pedido-num">${ordenes.length > 1 ? ordenes.length + ' pedidos' : '#' + ordenes[0].numero}</div>
           <div class="pedido-time">${mins} min</div>
           <ul class="pedido-items">

@@ -20,7 +20,8 @@ const App = {
     equipo:    { icon: '👥', label: 'Equipo' },
     negocio:   { icon: '⚙️', label: 'Config' },
     auditoria: { icon: '🔍', label: 'Auditoría' },
-    desempeno: { icon: '📈', label: 'Desempeño' }
+    desempeno: { icon: '📈', label: 'Desempeño' },
+    horarios:  { icon: '📅', label: 'Horarios' }
   },
 
   async init() {
@@ -349,6 +350,7 @@ const App = {
       case 'negocio':   NegocioAdmin.render(main); break;
       case 'auditoria': Auditoria.render(main); break;
       case 'desempeno': Desempeno.render(main); break;
+      case 'horarios':  Horarios.render(main); break;
       default:          location.hash = this.defaultView();
     }
   },

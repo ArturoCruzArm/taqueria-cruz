@@ -85,17 +85,27 @@ const Cocina = {
     }
     this.lastPendingCount = pendientes;
 
+    // Cargar tipo de pedido de las cuentas (para indicar domicilio/llevar en cocina)
+    const cuentaIds = [...new Set(ordenes.map(o => o.cuenta_id).filter(Boolean))];
+    let cuentaMap = {};
+    if (cuentaIds.length) {
+      const cuentas = await SB.get('taq_cuentas', `id=in.(${cuentaIds.join(',')})&select=id,tipo_pedido,direccion`);
+      cuentas.forEach(c => { cuentaMap[c.id] = c; });
+    }
+
     container.innerHTML = ordenes.map(o => {
       const oItems = items.filter(i => i.orden_id === o.id);
       const mins = Math.floor((Date.now() - new Date(o.created_at).getTime()) / 60000);
       const urgente = mins > 15;
-      const todosListos = oItems.length > 0 && oItems.every(i => i.estado === 'listo' || i.estado === 'entregado');
       const algunosListos = oItems.some(i => i.estado === 'listo');
+      const cuenta = o.cuenta_id ? cuentaMap[o.cuenta_id] : null;
+      const tipoIcon = cuenta?.tipo_pedido === 'domicilio' ? '🛵' : cuenta?.tipo_pedido === 'llevar' ? '🛍️' : '';
+      const tipoBadge = tipoIcon ? `<span style="font-size:.8rem;margin-left:4px">${tipoIcon}</span>` : '';
 
       return `
         <div class="cocina-card ${o.estado === 'lista' ? 'cocina-lista' : ''} ${urgente ? 'cocina-urgente' : ''}">
           <div class="cocina-card-header">
-            <span class="cocina-mesa">${o.mesa || 'Llevar'}</span>
+            <span class="cocina-mesa">${o.mesa || 'Llevar'}${tipoBadge}</span>
             <span class="cocina-num">#${o.numero}</span>
             <span class="cocina-time ${urgente ? 'urgente' : ''}">${mins} min</span>
           </div>

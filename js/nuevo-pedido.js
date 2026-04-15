@@ -131,7 +131,7 @@ const NuevoPedido = {
               <button class="btn btn-sm ${this.tipo==='llevar'?'btn-primary':'btn-outline'} tipo-btn" onclick="NuevoPedido.setTipo('llevar',this)">🛍️ Llevar</button>
               <button class="btn btn-sm ${this.tipo==='domicilio'?'btn-primary':'btn-outline'} tipo-btn" onclick="NuevoPedido.setTipo('domicilio',this)">🛵 Domicilio</button>
             </div>
-            <div id="camposEntrega" style="${this.tipo==='domicilio'?'':'display:none'};display:flex;flex-direction:column;gap:6px">
+            <div id="camposEntrega" style="${this.tipo==='domicilio'?'display:flex;flex-direction:column;gap:6px':'display:none'}">
               <input type="tel" id="telefonoInput" class="cliente-input" placeholder="Teléfono..."
                 value="${this.telefono}" oninput="NuevoPedido.telefono=this.value" inputmode="tel">
               <input type="text" id="direccionInput" class="cliente-input" placeholder="Dirección de entrega..."
@@ -469,7 +469,7 @@ const NuevoPedido = {
           telefono: this.telefono || null,
           direccion: this.direccion || null,
           notas_entrega: this.notasEntrega || null,
-          hora_programada: this.horaProgramada || null
+          hora_programada: this.horaProgramada ? new Date(this.horaProgramada).toISOString() : null
         });
 
         const [orden] = await SB.insertN('taq_ordenes', {
