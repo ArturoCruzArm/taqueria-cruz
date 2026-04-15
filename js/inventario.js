@@ -204,84 +204,105 @@ const Inventario = {
   },
 
   async _crearIngrediente(nombre, unidad, categoria, stockMinimo, costoUnitario) {
-    await SB.insertN('taq_ingredientes', { nombre, unidad, categoria, stock_minimo: stockMinimo, costo_unitario: costoUnitario });
-    Auth.audit('producto_creado', null, { tipo: 'ingrediente', nombre, unidad });
-    App.toast('Ingrediente agregado');
-    this.render(document.getElementById('main'));
+    try {
+      await SB.insertN('taq_ingredientes', { nombre, unidad, categoria, stock_minimo: stockMinimo, costo_unitario: costoUnitario });
+      Auth.audit('producto_creado', null, { tipo: 'ingrediente', nombre, unidad });
+      App.toast('Ingrediente agregado');
+      this.render(document.getElementById('main'));
+    } catch (e) {
+      ErrorLogger?.capture(e, 'Inventario._crearIngrediente');
+      App.toast('Error al crear ingrediente: ' + e.message, 'error');
+    }
   },
 
   async editarIngrediente(id) {
-    const [ing] = await SB.get('taq_ingredientes', `id=eq.${id}`);
-    if (!ing) return;
-    const nombre = prompt('Nombre:', ing.nombre);
-    if (!nombre) return;
-    const stockMin = parseFloat(prompt('Stock mínimo:', ing.stock_minimo)) || 0;
-    const costo = parseFloat(prompt('Costo por ' + ing.unidad + ':', ing.costo_unitario)) || 0;
+    try {
+      const [ing] = await SB.get('taq_ingredientes', `id=eq.${id}`);
+      if (!ing) return;
+      const nombre = prompt('Nombre:', ing.nombre);
+      if (!nombre) return;
+      const stockMin = parseFloat(prompt('Stock mínimo:', ing.stock_minimo)) || 0;
+      const costo = parseFloat(prompt('Costo por ' + ing.unidad + ':', ing.costo_unitario)) || 0;
 
-    await SB.update('taq_ingredientes', `id=eq.${id}`, { nombre, stock_minimo: stockMin, costo_unitario: costo });
-    App.toast('Ingrediente actualizado');
-    this.render(document.getElementById('main'));
+      await SB.update('taq_ingredientes', `id=eq.${id}`, { nombre, stock_minimo: stockMin, costo_unitario: costo });
+      App.toast('Ingrediente actualizado');
+      this.render(document.getElementById('main'));
+    } catch (e) {
+      ErrorLogger?.capture(e, 'Inventario.editarIngrediente');
+      App.toast('Error: ' + e.message, 'error');
+    }
   },
 
   async registrarCompra(ingId, nombre, unidad) {
     const cantidad = parseFloat(prompt(`¿Cuántas ${unidad} de ${nombre} compraste?`));
     if (!cantidad || cantidad <= 0) return;
-
-    await SB.rpc('registrar_movimiento', {
-      p_negocio_id:     SB.negocioId,
-      p_ingrediente_id: ingId,
-      p_tipo:           'compra',
-      p_cantidad:       cantidad,   // positivo = entrada
-      p_notas:          `Compra ${cantidad} ${unidad}`,
-      p_usuario_id:     Auth.user?.id || null
-    });
-
-    App.toast(`+${cantidad} ${unidad} de ${nombre}`);
-    this.render(document.getElementById('main'));
+    try {
+      await SB.rpc('registrar_movimiento', {
+        p_negocio_id:     SB.negocioId,
+        p_ingrediente_id: ingId,
+        p_tipo:           'compra',
+        p_cantidad:       cantidad,
+        p_notas:          `Compra ${cantidad} ${unidad}`,
+        p_usuario_id:     Auth.user?.id || null
+      });
+      App.toast(`+${cantidad} ${unidad} de ${nombre}`);
+      this.render(document.getElementById('main'));
+    } catch (e) {
+      ErrorLogger?.capture(e, 'Inventario.registrarCompra');
+      App.toast('Error al registrar compra: ' + e.message, 'error');
+    }
   },
 
   async registrarMerma(ingId, nombre, unidad) {
     const cantidad = parseFloat(prompt(`¿Cuántas ${unidad} de ${nombre} se perdieron/echaron a perder?`));
     if (!cantidad || cantidad <= 0) return;
     const motivo = prompt('Motivo (ej: se cayó, echó a perder, robo):') || 'sin especificar';
-
-    await SB.rpc('registrar_movimiento', {
-      p_negocio_id:     SB.negocioId,
-      p_ingrediente_id: ingId,
-      p_tipo:           'merma',
-      p_cantidad:       -cantidad,   // negativo = salida
-      p_notas:          motivo,
-      p_usuario_id:     Auth.user?.id || null
-    });
-
-    Auth.audit('orden_modificada', null, { producto: nombre, motivo, tipo: 'merma' }, 'warning');
-    App.toast(`-${cantidad} ${unidad} de ${nombre} (merma)`);
-    this.render(document.getElementById('main'));
+    try {
+      await SB.rpc('registrar_movimiento', {
+        p_negocio_id:     SB.negocioId,
+        p_ingrediente_id: ingId,
+        p_tipo:           'merma',
+        p_cantidad:       -cantidad,
+        p_notas:          motivo,
+        p_usuario_id:     Auth.user?.id || null
+      });
+      Auth.audit('orden_modificada', null, { producto: nombre, motivo, tipo: 'merma' }, 'warning');
+      App.toast(`-${cantidad} ${unidad} de ${nombre} (merma)`);
+      this.render(document.getElementById('main'));
+    } catch (e) {
+      ErrorLogger?.capture(e, 'Inventario.registrarMerma');
+      App.toast('Error al registrar merma: ' + e.message, 'error');
+    }
   },
 
   async registrarAjuste(ingId, nombre, unidad) {
-    const [ing] = await SB.getN('taq_ingredientes', `id=eq.${ingId}`);
-    const stockReal = parseFloat(prompt(
-      `Stock actual en sistema: ${ing?.stock_actual} ${unidad}\n¿Cuánto hay físicamente en almacén?`
-    ));
-    if (isNaN(stockReal)) return;
-    const motivo = prompt('Motivo del ajuste:') || 'regularización';
+    try {
+      const [ing] = await SB.getN('taq_ingredientes', `id=eq.${ingId}`);
+      if (!ing) { App.toast('Ingrediente no encontrado'); return; }
+      const stockReal = parseFloat(prompt(
+        `Stock actual en sistema: ${ing.stock_actual} ${unidad}\n¿Cuánto hay físicamente en almacén?`
+      ));
+      if (isNaN(stockReal)) return;
+      const motivo = prompt('Motivo del ajuste:') || 'regularización';
 
-    const diferencia = stockReal - parseFloat(ing?.stock_actual || 0);
-    if (diferencia === 0) { App.toast('Sin diferencia, no se registró ajuste'); return; }
+      const diferencia = stockReal - parseFloat(ing.stock_actual || 0);
+      if (diferencia === 0) { App.toast('Sin diferencia, no se registró ajuste'); return; }
 
-    await SB.rpc('registrar_movimiento', {
-      p_negocio_id:     SB.negocioId,
-      p_ingrediente_id: ingId,
-      p_tipo:           'ajuste',
-      p_cantidad:       diferencia,   // firmado: puede ser + o -
-      p_notas:          `Ajuste a ${stockReal} ${unidad}: ${motivo}`,
-      p_usuario_id:     Auth.user?.id || null
-    });
-
-    Auth.audit('orden_modificada', null, { producto: nombre, motivo, tipo: 'ajuste', diferencia }, 'warning');
-    App.toast(`Ajuste: ${diferencia > 0 ? '+' : ''}${diferencia.toFixed(2)} ${unidad} de ${nombre}`);
-    this.render(document.getElementById('main'));
+      await SB.rpc('registrar_movimiento', {
+        p_negocio_id:     SB.negocioId,
+        p_ingrediente_id: ingId,
+        p_tipo:           'ajuste',
+        p_cantidad:       diferencia,
+        p_notas:          `Ajuste a ${stockReal} ${unidad}: ${motivo}`,
+        p_usuario_id:     Auth.user?.id || null
+      });
+      Auth.audit('orden_modificada', null, { producto: nombre, motivo, tipo: 'ajuste', diferencia }, 'warning');
+      App.toast(`Ajuste: ${diferencia > 0 ? '+' : ''}${diferencia.toFixed(2)} ${unidad} de ${nombre}`);
+      this.render(document.getElementById('main'));
+    } catch (e) {
+      ErrorLogger?.capture(e, 'Inventario.registrarAjuste');
+      App.toast('Error al registrar ajuste: ' + e.message, 'error');
+    }
   },
 
   async agregarAReceta(productoId, productoNombre) {
@@ -290,8 +311,6 @@ const Inventario = {
       App.toast('Primero agrega ingredientes');
       return;
     }
-
-    // Mostrar lista de ingredientes para elegir
     const opciones = ingredientes.map((i, idx) => `${idx + 1}. ${i.nombre} (${i.unidad})`).join('\n');
     const sel = parseInt(prompt(`Elige ingrediente para "${productoNombre}":\n\n${opciones}`));
     if (!sel || sel < 1 || sel > ingredientes.length) return;
@@ -300,21 +319,26 @@ const Inventario = {
     const cantidad = parseFloat(prompt(`¿Cuántas ${ing.unidad} de ${ing.nombre} lleva 1 ${productoNombre}?`));
     if (!cantidad || cantidad <= 0) return;
 
-    await SB.insertN('taq_recetas', {
-      producto_id: productoId,
-      ingrediente_id: ing.id,
-      cantidad
-    });
-
-    App.toast(`${cantidad} ${ing.unidad} de ${ing.nombre} por ${productoNombre}`);
-    this.render(document.getElementById('main'));
+    try {
+      await SB.insertN('taq_recetas', { producto_id: productoId, ingrediente_id: ing.id, cantidad });
+      App.toast(`${cantidad} ${ing.unidad} de ${ing.nombre} por ${productoNombre}`);
+      this.render(document.getElementById('main'));
+    } catch (e) {
+      ErrorLogger?.capture(e, 'Inventario.agregarAReceta');
+      App.toast('Error: ' + e.message, 'error');
+    }
   },
 
   async quitarDeReceta(recetaId) {
     if (!confirm('¿Quitar este ingrediente de la receta?')) return;
-    await SB.delete('taq_recetas', `id=eq.${recetaId}`);
-    App.toast('Ingrediente quitado de receta');
-    this.render(document.getElementById('main'));
+    try {
+      await SB.delete('taq_recetas', `id=eq.${recetaId}`);
+      App.toast('Ingrediente quitado de receta');
+      this.render(document.getElementById('main'));
+    } catch (e) {
+      ErrorLogger?.capture(e, 'Inventario.quitarDeReceta');
+      App.toast('Error: ' + e.message, 'error');
+    }
   },
 
   // ── PRONÓSTICO ──

@@ -100,62 +100,77 @@ const NegocioAdmin = {
       color_primario: document.getElementById('cfgColor').value
     };
 
-    if (!datos.nombre) {
-      App.toast('El nombre es obligatorio');
-      return;
+    if (!datos.nombre) { App.toast('El nombre es obligatorio'); return; }
+
+    try {
+      await SB.update('taq_negocios', `id=eq.${SB.negocioId}`, datos);
+      Auth.negocio = { ...Auth.negocio, ...datos };
+      Auth.setNegocio(Auth.negocio);
+      document.title = datos.nombre;
+      Auth.audit('config_negocio_cambiada', null, { campos: Object.keys(datos) }, 'warning');
+      App.toast('Datos guardados');
+      App.renderTopBar();
+    } catch (e) {
+      ErrorLogger?.capture(e, 'NegocioAdmin.guardarDatos');
+      App.toast('Error al guardar: ' + e.message, 'error');
     }
-
-    await SB.update('taq_negocios', `id=eq.${SB.negocioId}`, datos);
-
-    // Actualizar en sesión
-    Auth.negocio = { ...Auth.negocio, ...datos };
-    Auth.setNegocio(Auth.negocio);
-    document.title = datos.nombre;
-
-    Auth.audit('config_negocio_cambiada', null, { campos: Object.keys(datos) }, 'warning');
-    App.toast('Datos guardados');
-    App.renderTopBar();
   },
 
   async generarCodigo() {
-    const codigo = String(Math.floor(100 + Math.random() * 900)); // 3 dígitos
+    const codigo = String(Math.floor(100 + Math.random() * 900)); // 3 dígitos 100-999
     const hoy = new Date().toISOString().split('T')[0];
-
-    // Verificar si ya existe
-    const existente = await SB.getN('taq_codigos_dia', `fecha=eq.${hoy}`);
-    if (existente.length) {
-      await SB.update('taq_codigos_dia', `id=eq.${existente[0].id}`, { codigo });
-    } else {
-      await SB.insertN('taq_codigos_dia', { codigo, fecha: hoy });
+    try {
+      const existente = await SB.getN('taq_codigos_dia', `fecha=eq.${hoy}`);
+      if (existente.length) {
+        await SB.update('taq_codigos_dia', `id=eq.${existente[0].id}`, { codigo });
+      } else {
+        await SB.insertN('taq_codigos_dia', { codigo, fecha: hoy });
+      }
+      Auth.audit('codigo_dia_generado', null, { codigo });
+      App.toast(`Código del día: ${codigo}`);
+      this.render(document.getElementById('main'));
+    } catch (e) {
+      ErrorLogger?.capture(e, 'NegocioAdmin.generarCodigo');
+      App.toast('Error al generar código: ' + e.message, 'error');
     }
-
-    Auth.audit('codigo_dia_generado', null, { codigo });
-    App.toast(`Código del día: ${codigo}`);
-    this.render(document.getElementById('main'));
   },
 
   async nuevaMesa() {
     const nombre = prompt('Nombre de la mesa/posición:');
-    if (!nombre) return;
-
-    const qr_token = crypto.randomUUID();
-    await SB.insertN('taq_mesas', { nombre, qr_token });
-    Auth.audit('mesa_creada', null, { nombre });
-    App.toast(`Mesa "${nombre}" creada`);
-    this.render(document.getElementById('main'));
+    if (!nombre || !nombre.trim()) return;
+    try {
+      const qr_token = crypto.randomUUID();
+      await SB.insertN('taq_mesas', { nombre: nombre.trim(), qr_token });
+      Auth.audit('mesa_creada', null, { nombre: nombre.trim() });
+      App.toast(`Mesa "${nombre.trim()}" creada`);
+      this.render(document.getElementById('main'));
+    } catch (e) {
+      ErrorLogger?.capture(e, 'NegocioAdmin.nuevaMesa');
+      App.toast('Error al crear mesa: ' + e.message, 'error');
+    }
   },
 
   async editarMesa(id, nombre) {
     const nuevo = prompt('Nombre:', nombre);
-    if (!nuevo) return;
-    await SB.update('taq_mesas', `id=eq.${id}`, { nombre: nuevo });
-    App.toast('Mesa actualizada');
-    this.render(document.getElementById('main'));
+    if (!nuevo || !nuevo.trim()) return;
+    try {
+      await SB.update('taq_mesas', `id=eq.${id}`, { nombre: nuevo.trim() });
+      App.toast('Mesa actualizada');
+      this.render(document.getElementById('main'));
+    } catch (e) {
+      ErrorLogger?.capture(e, 'NegocioAdmin.editarMesa');
+      App.toast('Error: ' + e.message, 'error');
+    }
   },
 
   async toggleMesa(id, activa) {
-    await SB.update('taq_mesas', `id=eq.${id}`, { activa });
-    App.toast(activa ? 'Mesa activada' : 'Mesa desactivada');
-    this.render(document.getElementById('main'));
+    try {
+      await SB.update('taq_mesas', `id=eq.${id}`, { activa });
+      App.toast(activa ? 'Mesa activada' : 'Mesa desactivada');
+      this.render(document.getElementById('main'));
+    } catch (e) {
+      ErrorLogger?.capture(e, 'NegocioAdmin.toggleMesa');
+      App.toast('Error: ' + e.message, 'error');
+    }
   }
 };

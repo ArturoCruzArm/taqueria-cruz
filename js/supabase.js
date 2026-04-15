@@ -40,6 +40,13 @@ const SB = {
     const r = await fetch(`${this.url}/rest/v1/${table}`, {
       method: 'POST', headers: this.headers(), body: JSON.stringify(data)
     });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      ErrorLogger?.dbError(table, JSON.stringify(data).slice(0, 200), r.status, err.message);
+      throw new Error(err.message || `Insert en ${table} falló: ${r.status}`);
+    }
+    const ct = r.headers.get('content-type') || '';
+    if (r.status === 204 || !ct.includes('json')) return [];
     return r.json();
   },
 
@@ -47,13 +54,25 @@ const SB = {
     const r = await fetch(`${this.url}/rest/v1/${table}?${query}`, {
       method: 'PATCH', headers: this.headers(), body: JSON.stringify(data)
     });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      ErrorLogger?.dbError(table, query, r.status, err.message);
+      throw new Error(err.message || `Update en ${table} falló: ${r.status}`);
+    }
+    const ct = r.headers.get('content-type') || '';
+    if (r.status === 204 || !ct.includes('json')) return null;
     return r.json();
   },
 
   async delete(table, query) {
-    await fetch(`${this.url}/rest/v1/${table}?${query}`, {
+    const r = await fetch(`${this.url}/rest/v1/${table}?${query}`, {
       method: 'DELETE', headers: this.headers()
     });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      ErrorLogger?.dbError(table, query, r.status, err.message);
+      throw new Error(err.message || `Delete en ${table} falló: ${r.status}`);
+    }
   },
 
   async deleteN(table, query) {

@@ -139,12 +139,15 @@ const Corte = {
   },
 
   async iniciarTurno() {
-    const [turno] = await SB.insertN('taq_turnos', {
-      usuario_id: Auth.user.id
-    });
-    this.turnoActivo = turno;
-    App.toast('Turno iniciado');
-    this.render(document.getElementById('main'));
+    try {
+      const [turno] = await SB.insertN('taq_turnos', { usuario_id: Auth.user.id });
+      this.turnoActivo = turno;
+      App.toast('Turno iniciado');
+      this.render(document.getElementById('main'));
+    } catch (e) {
+      ErrorLogger?.capture(e, 'Corte.iniciarTurno');
+      App.toast('Error al iniciar turno: ' + e.message, 'error');
+    }
   },
 
   async cerrarTurno() {
@@ -154,32 +157,35 @@ const Corte = {
     const turno = this.turnoActivo;
     const ahora = new Date().toISOString();
 
-    // Cerrar turno
-    await SB.update('taq_turnos', `id=eq.${turno.id}`, {
-      estado: 'cerrado',
-      fin: ahora,
-      total_ventas: totalVentas,
-      total_ordenes: numOrdenes
-    });
+    try {
+      await SB.update('taq_turnos', `id=eq.${turno.id}`, {
+        estado: 'cerrado',
+        fin: ahora,
+        total_ventas: totalVentas,
+        total_ordenes: numOrdenes
+      });
 
-    // Guardar corte ligado al turno
-    await SB.insertN('taq_cortes', {
-      fecha: new Date().toISOString().split('T')[0],
-      total_ventas: totalVentas,
-      total_ordenes: numOrdenes,
-      productos_vendidos: prodList,
-      notas: `Turno de ${Auth.user.nombre}: ${new Date(turno.inicio).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})} — ${new Date(ahora).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})}`
-    });
+      await SB.insertN('taq_cortes', {
+        fecha: new Date().toISOString().split('T')[0],
+        total_ventas: totalVentas,
+        total_ordenes: numOrdenes,
+        productos_vendidos: prodList,
+        notas: `Turno de ${Auth.user.nombre}: ${new Date(turno.inicio).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})} — ${new Date(ahora).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})}`
+      });
 
-    Auth.audit('corte_modificado', turno.id, {
-      total_ventas: totalVentas,
-      total_ordenes: numOrdenes,
-      horas: ((Date.now() - new Date(turno.inicio).getTime()) / 3600000).toFixed(1)
-    });
+      Auth.audit('corte_modificado', turno.id, {
+        total_ventas: totalVentas,
+        total_ordenes: numOrdenes,
+        horas: ((Date.now() - new Date(turno.inicio).getTime()) / 3600000).toFixed(1)
+      });
 
-    this.turnoActivo = null;
-    App.toast('Turno cerrado. Corte guardado.');
-    this.render(document.getElementById('main'));
+      this.turnoActivo = null;
+      App.toast('Turno cerrado. Corte guardado.');
+      this.render(document.getElementById('main'));
+    } catch (e) {
+      ErrorLogger?.capture(e, 'Corte.cerrarTurno');
+      App.toast('Error al cerrar turno: ' + e.message, 'error');
+    }
   },
 
   async loadHistorial() {
