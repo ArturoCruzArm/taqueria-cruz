@@ -1,11 +1,11 @@
 /**
- * menu-admin.js — Administración de menú (productos, categorías, precios)
+ * menu-admin.js — Administración de menú (multi-tenant, auditoría)
  */
 const MenuAdmin = {
   async render(el) {
     const [cats, prods] = await Promise.all([
-      SB.get('taq_categorias', 'order=orden'),
-      SB.get('taq_productos', 'order=orden')
+      SB.getN('taq_categorias', 'order=orden'),
+      SB.getN('taq_productos', 'order=orden')
     ]);
 
     el.innerHTML = `
@@ -53,6 +53,7 @@ const MenuAdmin = {
 
   async toggleDisponible(id, val) {
     await SB.update('taq_productos', `id=eq.${id}`, { disponible: val });
+    Auth.audit('producto_disponibilidad', id, { disponible: val });
     await App.loadMenu();
     this.render(document.getElementById('main'));
     App.toast(val ? 'Producto disponible' : 'Producto agotado');
@@ -67,7 +68,8 @@ const MenuAdmin = {
   },
 
   async _crearProducto(catId, nombre, precio) {
-    await SB.insert('taq_productos', { categoria_id: catId, nombre, precio, disponible: true });
+    const [prod] = await SB.insertN('taq_productos', { categoria_id: catId, nombre, precio, disponible: true });
+    Auth.audit('producto_creado', prod?.id, { nombre, precio });
     await App.loadMenu();
     this.render(document.getElementById('main'));
     App.toast('Producto agregado');
@@ -78,11 +80,19 @@ const MenuAdmin = {
     if (!nuevoNombre) return;
     const nuevoPrecio = parseFloat(prompt('Precio:', precio));
     if (isNaN(nuevoPrecio)) return;
-    this._actualizarProducto(id, nuevoNombre, nuevoPrecio);
+    this._actualizarProducto(id, nuevoNombre, nuevoPrecio, nombre, precio);
   },
 
-  async _actualizarProducto(id, nombre, precio) {
+  async _actualizarProducto(id, nombre, precio, nombreAnterior, precioAnterior) {
     await SB.update('taq_productos', `id=eq.${id}`, { nombre, precio });
+    // Auditar cambio de precio
+    if (precio !== precioAnterior) {
+      Auth.audit('precio_cambiado', id, {
+        producto: nombre,
+        precio_anterior: precioAnterior,
+        precio_nuevo: precio
+      }, 'warning');
+    }
     await App.loadMenu();
     this.render(document.getElementById('main'));
     App.toast('Producto actualizado');
@@ -96,7 +106,8 @@ const MenuAdmin = {
   },
 
   async _crearCategoria(nombre, icono) {
-    await SB.insert('taq_categorias', { nombre, icono, activa: true });
+    const [cat] = await SB.insertN('taq_categorias', { nombre, icono, activa: true });
+    Auth.audit('categoria_creada', cat?.id, { nombre, icono });
     await App.loadMenu();
     this.render(document.getElementById('main'));
     App.toast('Categoría creada');

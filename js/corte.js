@@ -1,24 +1,66 @@
 /**
- * corte.js — Corte de caja y resumen de ventas del día
+ * corte.js — Corte de caja por turno
+ * Cada cajero tiene su propio turno. Al hacer corte, cierra su turno.
+ * El nuevo cajero abre turno limpio.
  */
 const Corte = {
-  async render(el) {
-    const hoy = new Date().toISOString().split('T')[0];
-    const inicio = hoy + 'T00:00:00';
-    const fin = hoy + 'T23:59:59';
+  turnoActivo: null,
+  _resumen: null,  // { totalVentas, numOrdenes, prodList } del turno actual
 
-    const ordenes = await SB.get('taq_ordenes', `estado=eq.cobrada&cobrada_at=gte.${inicio}&cobrada_at=lte.${fin}&order=cobrada_at.desc`);
-    const canceladas = await SB.get('taq_ordenes', `estado=eq.cancelada&created_at=gte.${inicio}&created_at=lte.${fin}&select=id`);
+  async render(el) {
+    // Verificar si hay turno activo del usuario actual
+    const turnos = await SB.getN('taq_turnos', `usuario_id=eq.${Auth.user.id}&estado=eq.activo&limit=1`);
+    this.turnoActivo = turnos.length ? turnos[0] : null;
+
+    if (!this.turnoActivo) {
+      this.renderSinTurno(el);
+    } else {
+      await this.renderConTurno(el);
+    }
+  },
+
+  renderSinTurno(el) {
+    el.innerHTML = `
+      <div class="view-header">
+        <h1>Corte de Caja</h1>
+      </div>
+      <div class="turno-inicio">
+        <div class="empty-state">
+          <p>No tienes un turno abierto.</p>
+          <p style="color:var(--muted);font-size:.85rem">Al iniciar turno, las ventas que cobres se registrarán bajo tu nombre.</p>
+          <button class="btn btn-primary btn-lg" onclick="Corte.iniciarTurno()" style="margin-top:16px">
+            Iniciar Mi Turno
+          </button>
+        </div>
+      </div>
+      <h2 style="margin:2rem 0 .8rem;">Historial de Cortes</h2>
+      <div id="historialCortes"><p class="loading">Cargando...</p></div>
+    `;
+    this.loadHistorial();
+  },
+
+  async renderConTurno(el) {
+    const turno = this.turnoActivo;
+    // Convertir a formato Z para evitar que el + de +00:00 se interprete como espacio en URL
+    const inicio = new Date(turno.inicio).toISOString();
+
+    // Órdenes cobradas durante este turno
+    const ordenes = await SB.getN('taq_ordenes', `estado=eq.cobrada&cobrada_at=gte.${inicio}&turno_id=eq.${turno.id}&order=cobrada_at.desc`);
+    // También órdenes cobradas sin turno_id en este período (compatibilidad)
+    const ordenesSinTurno = await SB.getN('taq_ordenes', `estado=eq.cobrada&cobrada_at=gte.${inicio}&turno_id=is.null&order=cobrada_at.desc`);
+    const todasOrdenes = [...ordenes, ...ordenesSinTurno];
+
+    const canceladas = await SB.getN('taq_ordenes', `estado=eq.cancelada&created_at=gte.${inicio}&select=id`);
 
     let items = [];
-    if (ordenes.length) {
-      const ids = ordenes.map(o => o.id);
+    if (todasOrdenes.length) {
+      const ids = todasOrdenes.map(o => o.id);
       items = await SB.get('taq_orden_items', `orden_id=in.(${ids.join(',')})&order=created_at`);
     }
 
-    const totalVentas = ordenes.reduce((s, o) => s + parseFloat(o.total || 0), 0);
+    const totalVentas = todasOrdenes.reduce((s, o) => s + parseFloat(o.total || 0), 0);
+    const horasActivo = ((Date.now() - new Date(inicio).getTime()) / 3600000).toFixed(1);
 
-    // Productos vendidos agrupados
     const prodMap = {};
     items.forEach(i => {
       const key = i.nombre_producto;
@@ -28,20 +70,24 @@ const Corte = {
     });
     const prodList = Object.values(prodMap).sort((a, b) => b.cantidad - a.cantidad);
 
+    // Guardar en instancia para que cerrarTurno() lo lea sin depender del HTML
+    this._resumen = { totalVentas, numOrdenes: todasOrdenes.length, prodList };
+
     el.innerHTML = `
       <div class="view-header">
-        <h1>Corte de Caja</h1>
-        <span class="corte-fecha">${new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
+        <h1>Mi Turno</h1>
+        <span class="corte-fecha">${Auth.user.avatar} ${Auth.user.nombre} — ${horasActivo}h activo</span>
+        <button class="btn btn-sm btn-outline" onclick="Corte.exportarCSV()">⬇️ CSV</button>
       </div>
 
       <div class="corte-resumen">
         <div class="corte-stat corte-total">
-          <span class="corte-stat-label">Total Ventas</span>
+          <span class="corte-stat-label">Mis Ventas</span>
           <span class="corte-stat-value">$${totalVentas.toFixed(0)}</span>
         </div>
         <div class="corte-stat">
           <span class="corte-stat-label">Pedidos Cobrados</span>
-          <span class="corte-stat-value">${ordenes.length}</span>
+          <span class="corte-stat-value">${todasOrdenes.length}</span>
         </div>
         <div class="corte-stat">
           <span class="corte-stat-label">Productos Vendidos</span>
@@ -53,7 +99,7 @@ const Corte = {
         </div>
         <div class="corte-stat">
           <span class="corte-stat-label">Ticket Promedio</span>
-          <span class="corte-stat-value">$${ordenes.length ? (totalVentas / ordenes.length).toFixed(0) : 0}</span>
+          <span class="corte-stat-value">$${todasOrdenes.length ? (totalVentas / todasOrdenes.length).toFixed(0) : 0}</span>
         </div>
       </div>
 
@@ -62,7 +108,7 @@ const Corte = {
         <thead><tr><th>Producto</th><th>Cant.</th><th>Total</th></tr></thead>
         <tbody>
           ${prodList.map(p => `<tr><td>${p.nombre}</td><td>${p.cantidad}</td><td>$${p.total.toFixed(0)}</td></tr>`).join('')}
-          ${!prodList.length ? '<tr><td colspan="3" style="text-align:center;opacity:.5">Sin ventas hoy</td></tr>' : ''}
+          ${!prodList.length ? '<tr><td colspan="3" style="text-align:center;opacity:.5">Sin ventas en este turno</td></tr>' : ''}
         </tbody>
       </table>
 
@@ -70,7 +116,7 @@ const Corte = {
       <table class="corte-table">
         <thead><tr><th>#</th><th>Mesa</th><th>Total</th><th>Hora</th></tr></thead>
         <tbody>
-          ${ordenes.map(o => `
+          ${todasOrdenes.map(o => `
             <tr>
               <td>${o.numero}</td>
               <td>${o.mesa || 'Llevar'}</td>
@@ -81,32 +127,173 @@ const Corte = {
         </tbody>
       </table>
 
-      <button class="btn btn-primary btn-block" onclick="Corte.guardarCorte(${totalVentas}, ${ordenes.length}, '${encodeURIComponent(JSON.stringify(prodList))}')" style="margin-top:1.5rem;">
-        Guardar Corte del Día
+      <button class="btn btn-danger btn-block btn-lg" onclick="Corte.cerrarTurno()" style="margin-top:1.5rem;">
+        Cerrar Mi Turno y Hacer Corte
       </button>
+
+      <h2 style="margin:2rem 0 .8rem;">Historial de Cortes</h2>
+      <div id="historialCortes"><p class="loading">Cargando...</p></div>
+    `;
+
+    this.loadHistorial();
+  },
+
+  async iniciarTurno() {
+    const [turno] = await SB.insertN('taq_turnos', {
+      usuario_id: Auth.user.id
+    });
+    this.turnoActivo = turno;
+    App.toast('Turno iniciado');
+    this.render(document.getElementById('main'));
+  },
+
+  async cerrarTurno() {
+    if (!confirm('¿Cerrar tu turno? Se guardará el corte con tus ventas.')) return;
+
+    const { totalVentas, numOrdenes, prodList } = this._resumen || {};
+    const turno = this.turnoActivo;
+    const ahora = new Date().toISOString();
+
+    // Cerrar turno
+    await SB.update('taq_turnos', `id=eq.${turno.id}`, {
+      estado: 'cerrado',
+      fin: ahora,
+      total_ventas: totalVentas,
+      total_ordenes: numOrdenes
+    });
+
+    // Guardar corte ligado al turno
+    await SB.insertN('taq_cortes', {
+      fecha: new Date().toISOString().split('T')[0],
+      total_ventas: totalVentas,
+      total_ordenes: numOrdenes,
+      productos_vendidos: prodList,
+      notas: `Turno de ${Auth.user.nombre}: ${new Date(turno.inicio).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})} — ${new Date(ahora).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})}`
+    });
+
+    Auth.audit('corte_modificado', turno.id, {
+      total_ventas: totalVentas,
+      total_ordenes: numOrdenes,
+      horas: ((Date.now() - new Date(turno.inicio).getTime()) / 3600000).toFixed(1)
+    });
+
+    this.turnoActivo = null;
+    App.toast('Turno cerrado. Corte guardado.');
+    this.render(document.getElementById('main'));
+  },
+
+  async loadHistorial() {
+    const cortes = await SB.getN('taq_cortes', 'order=created_at.desc&limit=30');
+    const el = document.getElementById('historialCortes');
+    if (!el) return;
+
+    if (!cortes.length) {
+      el.innerHTML = '<p class="empty-state">Sin cortes guardados aún</p>';
+      return;
+    }
+
+    el.innerHTML = `
+      <table class="corte-table">
+        <thead><tr><th>Fecha</th><th>Turno</th><th>Pedidos</th><th>Ventas</th><th></th></tr></thead>
+        <tbody>
+          ${cortes.map(c => {
+            const fecha = new Date(c.created_at || c.fecha + 'T12:00:00');
+            const dia = fecha.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' });
+            return `
+              <tr>
+                <td>${dia}</td>
+                <td style="font-size:.75rem;color:var(--muted)">${c.notas || '—'}</td>
+                <td>${c.total_ordenes}</td>
+                <td><strong>$${parseFloat(c.total_ventas).toFixed(0)}</strong></td>
+                <td><button class="btn btn-sm btn-outline" onclick="Corte.verDetalle('${c.id}')">Ver</button></td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
     `;
   },
 
-  async guardarCorte(total, numOrdenes, prodListEncoded) {
-    const prodList = JSON.parse(decodeURIComponent(prodListEncoded));
-    const hoy = new Date().toISOString().split('T')[0];
+  async verDetalle(corteId) {
+    const arr = await SB.get('taq_cortes', `id=eq.${corteId}`);
+    if (!arr.length) return;
+    const c = arr[0];
+    const prods = c.productos_vendidos || [];
 
-    // Verificar si ya existe corte de hoy
-    const existing = await SB.get('taq_cortes', `fecha=eq.${hoy}`);
-    if (existing.length) {
-      await SB.update('taq_cortes', `fecha=eq.${hoy}`, {
-        total_ventas: total,
-        total_ordenes: numOrdenes,
-        productos_vendidos: prodList
-      });
-    } else {
-      await SB.insert('taq_cortes', {
-        fecha: hoy,
-        total_ventas: total,
-        total_ordenes: numOrdenes,
-        productos_vendidos: prodList
-      });
-    }
-    App.toast('Corte guardado');
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.onclick = e => { if (e.target === modal) modal.remove(); };
+    modal.innerHTML = `
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2>Detalle de Corte</h2>
+          <button class="btn btn-sm btn-outline" onclick="this.closest('.modal-overlay').remove()">✕</button>
+        </div>
+        ${c.notas ? `<p style="color:var(--muted);font-size:.85rem;margin-bottom:12px">${c.notas}</p>` : ''}
+        <div class="corte-resumen" style="margin-bottom:12px;">
+          <div class="corte-stat corte-total">
+            <span class="corte-stat-label">Ventas</span>
+            <span class="corte-stat-value">$${parseFloat(c.total_ventas).toFixed(0)}</span>
+          </div>
+          <div class="corte-stat">
+            <span class="corte-stat-label">Pedidos</span>
+            <span class="corte-stat-value">${c.total_ordenes}</span>
+          </div>
+        </div>
+        <table class="corte-table">
+          <thead><tr><th>Producto</th><th>Cant.</th><th>Total</th></tr></thead>
+          <tbody>
+            ${prods.map(p => `<tr><td>${p.nombre}</td><td>${p.cantidad}</td><td>$${parseFloat(p.total).toFixed(0)}</td></tr>`).join('')}
+            ${!prods.length ? '<tr><td colspan="3" style="text-align:center;opacity:.5">Sin detalle</td></tr>' : ''}
+          </tbody>
+        </table>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  },
+
+  async exportarCSV() {
+    // Exportar órdenes cobradas del turno activo (o del día si no hay turno)
+    const resumen = this._resumen;
+    if (!resumen) { App.toast('Primero abre un turno'); return; }
+
+    const desde = this._turnoActivo?.inicio || App.inicioDia(App.hoy());
+    const ordenes = await SB.getN('taq_ordenes',
+      `estado=eq.cobrada&cobrada_at=gte.${desde}&order=cobrada_at`);
+
+    if (!ordenes.length) { App.toast('Sin ventas para exportar'); return; }
+
+    const ids = ordenes.map(o => o.id).join(',');
+    const items = await SB.get('taq_orden_items', `orden_id=in.(${ids})&order=created_at`);
+
+    // Construir CSV
+    const enc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const header = ['Fecha','Hora','#Orden','Mesa','Producto','Cant','Precio Unit','Subtotal','Método','Total Cuenta'];
+    const rows = items.map(i => {
+      const orden = ordenes.find(o => o.id === i.orden_id) || {};
+      const fecha = new Date(orden.cobrada_at || orden.created_at);
+      return [
+        fecha.toLocaleDateString('es-MX'),
+        fecha.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+        orden.numero || '',
+        orden.mesa || '',
+        i.nombre_producto,
+        i.cantidad,
+        parseFloat(i.precio_unitario || 0).toFixed(2),
+        (i.cantidad * parseFloat(i.precio_unitario || 0)).toFixed(2),
+        orden.metodo_pago || 'efectivo',
+        parseFloat(orden.total || 0).toFixed(2)
+      ].map(enc).join(',');
+    });
+
+    const csv = [header.map(enc).join(','), ...rows].join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ventas_${App.hoy()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    App.toast('CSV descargado');
   }
 };
