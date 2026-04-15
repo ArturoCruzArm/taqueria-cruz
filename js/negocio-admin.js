@@ -24,19 +24,19 @@ const NegocioAdmin = {
         <div class="config-form">
           <div class="config-field">
             <label>Nombre</label>
-            <input type="text" id="cfgNombre" value="${negocio.nombre || ''}" class="config-input">
+            <input type="text" id="cfgNombre" value="${App.esc(negocio.nombre || '')}" class="config-input">
           </div>
           <div class="config-field">
             <label>Descripción</label>
-            <input type="text" id="cfgDesc" value="${negocio.descripcion || ''}" class="config-input" placeholder="Ej: Los mejores tacos de la zona">
+            <input type="text" id="cfgDesc" value="${App.esc(negocio.descripcion || '')}" class="config-input" placeholder="Ej: Los mejores tacos de la zona">
           </div>
           <div class="config-field">
             <label>Dirección</label>
-            <input type="text" id="cfgDir" value="${negocio.direccion || ''}" class="config-input" placeholder="Ej: Av. Reforma 123, Col. Centro">
+            <input type="text" id="cfgDir" value="${App.esc(negocio.direccion || '')}" class="config-input" placeholder="Ej: Av. Reforma 123, Col. Centro">
           </div>
           <div class="config-field">
             <label>Teléfono</label>
-            <input type="tel" id="cfgTel" value="${negocio.telefono || ''}" class="config-input" placeholder="Ej: 55 1234 5678">
+            <input type="tel" id="cfgTel" value="${App.esc(negocio.telefono || '')}" class="config-input" placeholder="Ej: 55 1234 5678">
           </div>
           <div class="config-field">
             <label>Color principal</label>

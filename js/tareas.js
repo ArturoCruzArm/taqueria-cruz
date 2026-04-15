@@ -123,8 +123,8 @@ const Tareas = {
             <span class="tarea-tipo">${cfg.icon} ${cfg.label}</span>
             <span class="tarea-time">${mins} min</span>
           </div>
-          ${t.mesa ? `<div class="tarea-mesa">📍 ${t.mesa}</div>` : ''}
-          ${t.descripcion ? `<div class="tarea-desc">${t.descripcion}</div>` : ''}
+          ${t.mesa ? `<div class="tarea-mesa">📍 ${App.esc(t.mesa)}</div>` : ''}
+          ${t.descripcion ? `<div class="tarea-desc">${App.esc(t.descripcion)}</div>` : ''}
           ${creador ? `<div class="tarea-creador">De: ${creador.avatar} ${creador.nombre}</div>` : ''}
           ${t.estado === 'en_proceso' && t.completado_por ? '' : ''}
           ${completador ? `<div class="tarea-completador">Por: ${completador.avatar} ${completador.nombre} — ${t.completado_at ? new Date(t.completado_at).toLocaleTimeString('es-MX', {hour:'2-digit',minute:'2-digit'}) : ''}</div>` : ''}
