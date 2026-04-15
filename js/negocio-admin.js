@@ -138,7 +138,8 @@ const NegocioAdmin = {
     const nombre = prompt('Nombre de la mesa/posición:');
     if (!nombre) return;
 
-    await SB.insertN('taq_mesas', { nombre });
+    const qr_token = crypto.randomUUID();
+    await SB.insertN('taq_mesas', { nombre, qr_token });
     Auth.audit('mesa_creada', null, { nombre });
     App.toast(`Mesa "${nombre}" creada`);
     this.render(document.getElementById('main'));

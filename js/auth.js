@@ -124,12 +124,16 @@ const Auth = {
   setNegocio(negocio) {
     this.negocio = negocio;
     SB.negocioId = negocio.id;
-    // Actualizar localStorage si hay sesión
+    // Actualizar localStorage si hay sesión — conservar loginAt para no expirar la sesión
     if (this.user) {
+      const saved = localStorage.getItem('taq_user');
+      let loginAt = Date.now();
+      try { loginAt = JSON.parse(saved).loginAt || loginAt; } catch (_) {}
       localStorage.setItem('taq_user', JSON.stringify({
         user: this.user,
         rol: this.rol,
-        negocio: this.negocio
+        negocio: this.negocio,
+        loginAt
       }));
     }
   },

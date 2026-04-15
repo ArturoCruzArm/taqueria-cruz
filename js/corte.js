@@ -257,7 +257,7 @@ const Corte = {
     const resumen = this._resumen;
     if (!resumen) { App.toast('Primero abre un turno'); return; }
 
-    const desde = this._turnoActivo?.inicio || App.inicioDia(App.hoy());
+    const desde = this.turnoActivo?.inicio || App.inicioDia(App.hoy());
     const ordenes = await SB.getN('taq_ordenes',
       `estado=eq.cobrada&cobrada_at=gte.${desde}&order=cobrada_at`);
 

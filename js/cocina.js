@@ -11,7 +11,8 @@ const Cocina = {
 
   playSound() {
     try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const ctx = App._ensureAudio();
+      if (!ctx) return;
       [0, 0.2].forEach(delay => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();

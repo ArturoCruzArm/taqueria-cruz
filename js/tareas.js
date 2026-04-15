@@ -8,7 +8,8 @@ const Tareas = {
 
   playAlert() {
     try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const ctx = App._ensureAudio();
+      if (!ctx) return;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain);
@@ -147,7 +148,7 @@ const Tareas = {
   async tomar(tareaId) {
     await SB.update('taq_tareas', `id=eq.${tareaId}`, {
       estado: 'en_proceso',
-      completado_por: Auth.user?.id
+      asignado_a: Auth.user?.id
     });
     App.toast('Tarea tomada');
   },
