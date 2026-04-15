@@ -250,10 +250,10 @@ const Auditoria = {
           <div class="audit-entry-header">
             <span class="audit-sev">${sevIcon[a.severidad] || '⚪'}</span>
             <span class="audit-tipo">${this._tipoLabel(a.tipo)}</span>
-            <span class="audit-user">${user ? user.avatar + ' ' + user.nombre : 'Sistema'}</span>
+            <span class="audit-user">${user ? user.avatar + ' ' + App.esc(user.nombre) : 'Sistema'}</span>
             <span class="audit-time">${dia} ${hora}</span>
           </div>
-          ${metaStr ? `<div class="audit-meta">${metaStr}</div>` : ''}
+          ${metaStr ? `<div class="audit-meta">${App.esc(metaStr)}</div>` : ''}
         </div>
       `;
     }).join('');
