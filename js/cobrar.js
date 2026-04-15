@@ -210,6 +210,9 @@ const Cobrar = {
         turno_id: turnoActivo?.id
       });
 
+      // Cerrar tareas pendientes de estas órdenes (recoger comida, llevar cuenta, etc.)
+      await this.cerrarTareasDeOrdenes();
+
       App.toast('Cobrado $' + this.total.toFixed(0));
       location.hash = 'pedidos';
     } catch (e) {
@@ -266,6 +269,20 @@ const Cobrar = {
     } catch (e) {
       console.warn('Error descontando inventario:', e);
     }
+  },
+
+  async cerrarTareasDeOrdenes() {
+    if (!this.ordenes.length) return;
+    try {
+      const ahora = new Date().toISOString();
+      for (const orden of this.ordenes) {
+        // PATCH en todas las tareas no completadas de esta orden
+        await SB.update('taq_tareas',
+          `orden_id=eq.${orden.id}&estado=neq.completada&negocio_id=eq.${SB.negocioId}`,
+          { estado: 'completada', completado_por: Auth.user?.id || null, completado_at: ahora }
+        );
+      }
+    } catch (_) {}
   },
 
   imprimirTicket() {

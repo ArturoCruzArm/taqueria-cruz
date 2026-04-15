@@ -319,10 +319,12 @@ const Pedidos = {
           <div class="pedido-total">$${totalCuenta.toFixed(0)}</div>
           <div class="pedido-actions">
             <button class="btn btn-sm btn-primary" onclick="location.hash='nuevo/cuenta/${cuenta.id}'">+ Agregar</button>
-            ${ordenes.some(o => o.estado === 'abierta') ? `<button class="btn btn-sm btn-warning" onclick="Pedidos.enviarTodosCocina('${cuenta.id}')">Enviar a Cocina</button>` : ''}
-            ${estadoGeneral === 'lista' ? `<button class="btn btn-sm btn-success" onclick="location.hash='cobrar/cuenta/${cuenta.id}'">Cobrar</button>` : ''}
-            <button class="btn btn-sm btn-outline" onclick="location.hash='nuevo/${ordenes[ordenes.length - 1].id}'">Editar último</button>
-            ${Auth.esAdmin() ? `<button class="btn btn-sm btn-danger" onclick="Pedidos.eliminarCuenta('${cuenta.id}', '${(cuenta.nombre_cliente || '').replace(/'/g,"\\'")}')">Eliminar</button>` : ''}
+            ${ordenes.some(o => o.estado === 'abierta') ? `<button class="btn btn-sm btn-warning" onclick="Pedidos.enviarTodosCocina('${cuenta.id}')">🔥 Cocina</button>` : ''}
+            <button class="btn btn-sm btn-success" onclick="location.hash='cobrar/cuenta/${cuenta.id}'">
+              💰 Cobrar${estadoGeneral !== 'lista' ? ' *' : ''}
+            </button>
+            <button class="btn btn-sm btn-outline" onclick="location.hash='nuevo/${ordenes[ordenes.length - 1].id}'">Editar</button>
+            ${Auth.esAdmin() ? `<button class="btn btn-sm btn-danger" onclick="Pedidos.eliminarCuenta('${cuenta.id}', '${(cuenta.nombre_cliente || '').replace(/'/g,"\\'")}')">🗑️</button>` : ''}
           </div>
         </div>
       `;

@@ -116,8 +116,17 @@ const SB = {
         const msg = JSON.parse(e.data);
         const ch = this._channels[msg.topic];
         if (ch && msg.event === 'postgres_changes') {
-          const payload = msg.payload;
-          if (ch.callback) ch.callback(payload);
+          // Supabase Realtime v1 envía { payload: { data: { type, record, old_record } } }
+          // Normalizamos al formato { eventType, new, old } que usan los suscriptores
+          const raw = msg.payload?.data || msg.payload || {};
+          const normalized = {
+            eventType: raw.type,          // 'INSERT' | 'UPDATE' | 'DELETE'
+            new:  raw.record     || {},
+            old:  raw.old_record || {},
+            table: raw.table,
+            schema: raw.schema
+          };
+          if (ch.callback) ch.callback(normalized);
         }
       } catch (_) {}
     };

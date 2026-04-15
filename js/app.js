@@ -199,19 +199,37 @@ const App = {
     SB.getN('taq_solicitudes', 'estado=eq.pendiente&select=id').then(p => this.updateSolicBadge(p.length));
   },
 
+  // AudioContext compartido — se crea una sola vez en el primer gesto del usuario.
+  // Crear uno nuevo por llamada resulta en contextos suspendidos en móvil.
+  _audioCtx: null,
+
+  _ensureAudio() {
+    if (!this._audioCtx) {
+      try { this._audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) {}
+    }
+    // Reactivar si el navegador lo suspendió (ej. al volver de background)
+    if (this._audioCtx?.state === 'suspended') {
+      this._audioCtx.resume().catch(() => {});
+    }
+    return this._audioCtx;
+  },
+
   playSolicAlert() {
     try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      [0, 0.25, 0.5].forEach(delay => {
+      const ctx = this._ensureAudio();
+      if (!ctx || ctx.state === 'suspended') return;
+      const now = ctx.currentTime;
+      [0, 0.25, 0.5].forEach(d => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.connect(gain);
         gain.connect(ctx.destination);
         osc.frequency.value = 660;
         osc.type = 'triangle';
-        gain.gain.value = 0.3;
-        osc.start(ctx.currentTime + delay);
-        osc.stop(ctx.currentTime + delay + 0.15);
+        gain.gain.setValueAtTime(0.3, now + d);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + d + 0.18);
+        osc.start(now + d);
+        osc.stop(now + d + 0.2);
       });
       if (navigator.vibrate) navigator.vibrate([100, 80, 100, 80, 200]);
     } catch (_) {}
@@ -415,4 +433,11 @@ const App = {
   }
 };
 
-document.addEventListener('DOMContentLoaded', () => App.init());
+document.addEventListener('DOMContentLoaded', () => {
+  App.init();
+  // Inicializar AudioContext en el primer gesto — único momento en que los
+  // navegadores móviles permiten crear un contexto de audio sin suspenderlo.
+  const initAudio = () => { App._ensureAudio(); };
+  document.addEventListener('touchend', initAudio, { once: true, passive: true });
+  document.addEventListener('click',    initAudio, { once: true, passive: true });
+});
