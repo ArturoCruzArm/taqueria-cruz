@@ -67,13 +67,33 @@ const NegocioAdmin = {
         </button>
       </div>
 
+      <!-- URL del menú general -->
+      <div class="config-section">
+        <h2>🔗 Menú para Clientes</h2>
+        ${(() => {
+          const slug = negocio.slug || '';
+          const base = location.origin + location.pathname.replace(/\/[^/]*$/, '/');
+          const urlMenu = `${base}cliente.html?n=${slug}`;
+          return `
+            <p style="color:var(--muted);font-size:.85rem">Comparte este enlace para que los clientes vean tu menú desde su celular. Sin mesa asignada solo pueden ver, no pedir.</p>
+            <div style="background:var(--bg2);border-radius:8px;padding:12px;margin:10px 0">
+              <div style="font-size:.78rem;color:var(--muted);word-break:break-all;margin-bottom:8px">${urlMenu}</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn btn-sm btn-primary" onclick="navigator.clipboard.writeText('${urlMenu.replace(/'/g,"\\'")}').then(()=>App.toast('URL copiada'))">📋 Copiar URL del menú</button>
+                <a class="btn btn-sm btn-outline" href="${urlMenu}" target="_blank">🔗 Abrir menú</a>
+              </div>
+            </div>
+          `;
+        })()}
+      </div>
+
       <!-- Mesas -->
       <div class="config-section">
         <h2>🪑 Mesas / Posiciones</h2>
-        <p style="color:var(--muted);font-size:.85rem">Cada mesa tiene un QR único para que los clientes puedan ordenar.</p>
+        <p style="color:var(--muted);font-size:.85rem">Cada mesa tiene su propio enlace. El cliente que entra por ese enlace puede hacer pedidos desde su lugar.</p>
         <div class="config-mesas">
           ${mesas.map(m => {
-            const slug = Auth.negocio?.slug || '';
+            const slug = negocio.slug || '';
             const base = location.origin + location.pathname.replace(/\/[^/]*$/, '/');
             const url = m.qr_token ? `${base}cliente.html?n=${slug}&mesa=${m.qr_token}` : null;
             return `
@@ -82,10 +102,10 @@ const NegocioAdmin = {
               ${url ? `
                 <div style="font-size:.72rem;color:var(--muted);word-break:break-all;margin:2px 0">${url}</div>
                 <div style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0">
-                  <button class="btn btn-sm btn-outline" onclick="navigator.clipboard.writeText('${url.replace(/'/g,"\\'")}').then(()=>App.toast('URL copiada'))">📋 Copiar URL</button>
+                  <button class="btn btn-sm btn-outline" onclick="navigator.clipboard.writeText('${url.replace(/'/g,"\\'")}').then(()=>App.toast('URL copiada'))">📋 Copiar</button>
                   <a class="btn btn-sm btn-outline" href="${url}" target="_blank">🔗 Abrir</a>
                 </div>
-              ` : `<span style="font-size:.72rem;color:var(--muted)">Sin QR token</span>`}
+              ` : `<span style="font-size:.72rem;color:var(--muted)">Sin token QR — recrea la mesa para generarlo</span>`}
               <div>
                 ${m.activa
                   ? `<button class="btn btn-sm btn-outline" onclick="NegocioAdmin.toggleMesa('${m.id}', false)">Desactivar</button>`

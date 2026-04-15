@@ -26,15 +26,15 @@ const ClienteApp = {
     const slug = params.get('n');
     const qrToken = params.get('mesa');
 
-    if (!slug) {
-      this.renderError('URL inválida', 'Escanea el código QR de tu mesa');
-      return;
+    // Cargar negocio — si no hay slug, tomar el primer negocio activo (instalación de un solo negocio)
+    let res;
+    if (slug) {
+      res = await SB.get('taq_negocios', `slug=eq.${slug}&activo=eq.true&limit=1`);
+    } else {
+      res = await SB.get('taq_negocios', 'activo=eq.true&order=created_at&limit=1');
     }
-
-    // Cargar negocio
-    const res = await SB.get('taq_negocios', `slug=eq.${slug}&activo=eq.true&limit=1`);
     if (!res.length) {
-      this.renderError('Negocio no encontrado', 'Verifica el código QR');
+      this.renderError('Menú no disponible', 'El negocio no existe o está inactivo');
       return;
     }
     this.negocio = res[0];
