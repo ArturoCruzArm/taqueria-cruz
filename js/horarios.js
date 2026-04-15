@@ -161,7 +161,9 @@ const Horarios = (() => {
       html += `<td style="padding:6px;text-align:center;border-left:2px solid #333">${resumen}</td>`;
       html += '</tr>';
     }
-    // Fila de totales por día
+    html += '</tbody>';
+
+    // Fila de totales por día (tfoot fuera del tbody)
     html += `<tfoot><tr style="background:#111;font-size:11px">
       <td style="padding:6px 8px;color:#888">Turnos/día</td>`;
     for (let i = 0; i < 7; i++) {
@@ -173,7 +175,7 @@ const Horarios = (() => {
       </td>`;
     }
     html += `<td style="border-left:2px solid #333"></td></tr></tfoot>`;
-    html += '</tbody></table>';
+    html += '</table>';
 
     body.innerHTML = html;
 

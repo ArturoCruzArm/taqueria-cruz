@@ -73,6 +73,7 @@ const App = {
     this.requestNotifPermission();
     this.startSolicitudesWatch();
     this.startOrdenListaWatch();
+    this.startProgramadosWatch();
     window.removeEventListener('hashchange', this._routeHandler);
     this._routeHandler = () => this.route();
     window.addEventListener('hashchange', this._routeHandler);
@@ -168,6 +169,39 @@ const App = {
         this.toast('🍽️ Orden lista: ' + mesa);
       }
     });
+  },
+
+  // ── ALERTA DE PEDIDOS PROGRAMADOS PRÓXIMOS ──
+  _progCheckTimer: null,
+  _progAlertados: new Set(),  // IDs ya alertados para no repetir
+
+  startProgramadosWatch() {
+    if (!Auth.puede('pedidos')) return;
+    clearInterval(this._progCheckTimer);
+    this._progCheckTimer = setInterval(() => this._checkProgramados(), 60000);
+    this._checkProgramados(); // verificar al iniciar
+  },
+
+  async _checkProgramados() {
+    if (!Auth.puede('pedidos')) return;
+    const ahora = new Date();
+    const en30 = new Date(ahora.getTime() + 30 * 60000).toISOString();
+    const cuentas = await SB.getN('taq_cuentas',
+      `hora_programada=gte.${ahora.toISOString()}&hora_programada=lte.${en30}&estado=eq.abierta&select=id,nombre_cliente,hora_programada,tipo_pedido&limit=10`);
+
+    for (const c of cuentas) {
+      if (this._progAlertados.has(c.id)) continue;
+      this._progAlertados.add(c.id);
+      const hora = new Date(c.hora_programada).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+      const mins = Math.round((new Date(c.hora_programada) - ahora) / 60000);
+      const tipoIcon = c.tipo_pedido === 'domicilio' ? '🛵' : '🛍️';
+      this.playSolicAlert();
+      this.flashAlert('solicitud');
+      this.showNotif(`${tipoIcon} Pedido programado`, `${c.nombre_cliente || 'Cliente'} a las ${hora} (${mins} min)`, 'prog-' + c.id);
+      if (this.currentView !== 'pedidos') {
+        this.toast(`${tipoIcon} Pedido para las ${hora}: ${c.nombre_cliente || 'Cliente'}`, 'warning');
+      }
+    }
   },
 
   _solicSub: null,

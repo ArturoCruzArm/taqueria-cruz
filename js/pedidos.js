@@ -6,6 +6,7 @@ const Pedidos = {
   _sub: null,
   _subSolic: null,
   _lastSolicCount: -1,
+  _progTimer: null,
 
   playAlert() { App.playSolicAlert(); },
 
@@ -34,6 +35,12 @@ const Pedidos = {
     this.load();
     this.loadSolicitudes();
     this.loadProgramados();
+    // Refrescar countdown de programados cada minuto
+    clearInterval(this._progTimer);
+    this._progTimer = setInterval(() => {
+      if (App.currentView === 'pedidos') this.loadProgramados();
+      else clearInterval(this._progTimer);
+    }, 60000);
 
     this._sub && SB.unsubscribe(this._sub);
     this._sub = SB.subscribeN('taq_ordenes', () => {
