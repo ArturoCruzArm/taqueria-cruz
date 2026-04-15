@@ -72,10 +72,20 @@ const NegocioAdmin = {
         <h2>🪑 Mesas / Posiciones</h2>
         <p style="color:var(--muted);font-size:.85rem">Cada mesa tiene un QR único para que los clientes puedan ordenar.</p>
         <div class="config-mesas">
-          ${mesas.map(m => `
+          ${mesas.map(m => {
+            const slug = Auth.negocio?.slug || '';
+            const base = location.origin + location.pathname.replace(/\/[^/]*$/, '/');
+            const url = m.qr_token ? `${base}cliente.html?n=${slug}&mesa=${m.qr_token}` : null;
+            return `
             <div class="config-mesa-item">
               <span class="config-mesa-nombre">${m.nombre}</span>
-              <span class="config-mesa-token" style="font-size:.7rem;color:var(--muted)">${m.qr_token || ''}</span>
+              ${url ? `
+                <div style="font-size:.72rem;color:var(--muted);word-break:break-all;margin:2px 0">${url}</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0">
+                  <button class="btn btn-sm btn-outline" onclick="navigator.clipboard.writeText('${url.replace(/'/g,"\\'")}').then(()=>App.toast('URL copiada'))">📋 Copiar URL</button>
+                  <a class="btn btn-sm btn-outline" href="${url}" target="_blank">🔗 Abrir</a>
+                </div>
+              ` : `<span style="font-size:.72rem;color:var(--muted)">Sin QR token</span>`}
               <div>
                 ${m.activa
                   ? `<button class="btn btn-sm btn-outline" onclick="NegocioAdmin.toggleMesa('${m.id}', false)">Desactivar</button>`
@@ -84,7 +94,7 @@ const NegocioAdmin = {
                 <button class="btn btn-sm btn-outline" onclick="NegocioAdmin.editarMesa('${m.id}', '${m.nombre.replace(/'/g,"\\'")}')">✏️</button>
               </div>
             </div>
-          `).join('')}
+          `}).join('')}
         </div>
         <button class="btn btn-outline btn-block" onclick="NegocioAdmin.nuevaMesa()" style="margin-top:8px">+ Nueva Mesa</button>
       </div>

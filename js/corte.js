@@ -150,8 +150,12 @@ const Corte = {
     }
   },
 
+  _closing: false,
+
   async cerrarTurno() {
+    if (this._closing) return;
     if (!confirm('¿Cerrar tu turno? Se guardará el corte con tus ventas.')) return;
+    this._closing = true;
 
     const { totalVentas, numOrdenes, prodList } = this._resumen || {};
     const turno = this.turnoActivo;
@@ -180,9 +184,11 @@ const Corte = {
       });
 
       this.turnoActivo = null;
+      this._closing = false;
       App.toast('Turno cerrado. Corte guardado.');
       this.render(document.getElementById('main'));
     } catch (e) {
+      this._closing = false;
       ErrorLogger?.capture(e, 'Corte.cerrarTurno');
       App.toast('Error al cerrar turno: ' + e.message, 'error');
     }

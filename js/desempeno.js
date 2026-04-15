@@ -49,12 +49,14 @@ const Desempeno = {
     const el = document.getElementById('desemp-content');
     if (!el) return;
 
-    const [usuarios, actividad] = await Promise.all([
+    const [usuarios, actividad, cuentasCobradas] = await Promise.all([
       SB.getN('taq_usuarios', 'activo=eq.true&order=nombre'),
-      SB.getN('taq_actividad', `created_at=gte.${desde}&order=created_at.desc`)
+      SB.getN('taq_actividad', `created_at=gte.${desde}&order=created_at.desc`),
+      // Cobros reales desde taq_cuentas — fuente de verdad, no depende de audit logs
+      SB.getN('taq_cuentas', `estado=eq.cobrada&cobrada_at=gte.${desde}&select=cobrada_por,total`)
     ]);
 
-    if (!actividad.length) {
+    if (!actividad.length && !cuentasCobradas.length) {
       el.innerHTML = '<p class="empty-state">Sin actividad en este período</p>';
       return;
     }
@@ -74,6 +76,15 @@ const Desempeno = {
       };
     }
 
+    // Cobros desde taq_cuentas (preciso aunque falte el audit log)
+    for (const c of cuentasCobradas) {
+      const uid = c.cobrada_por;
+      if (!uid || !stats[uid]) continue;
+      stats[uid].cobros++;
+      stats[uid].cobrado_total += parseFloat(c.total || 0);
+    }
+
+    // Actividad para pedidos, cocina, cancelados (excluyendo cobrado que ya viene de cuentas)
     for (const a of actividad) {
       const uid = a.usuario_id;
       if (!uid || !stats[uid]) continue;
@@ -86,10 +97,6 @@ const Desempeno = {
         case 'cocinado':
           s.cocinados++;
           if (meta.tiempo_cocina_seg) s.tiempos_cocina.push(meta.tiempo_cocina_seg);
-          break;
-        case 'cobrado':
-          s.cobros++;
-          s.cobrado_total += parseFloat(meta.total || 0);
           break;
         case 'cancelado':       s.cancelados++; break;
       }
