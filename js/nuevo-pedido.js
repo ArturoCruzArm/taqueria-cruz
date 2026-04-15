@@ -10,6 +10,11 @@ const NuevoPedido = {
   cuenta: null,
   items: [],
   mesa: '',
+  tipo: 'mesa',        // 'mesa' | 'llevar' | 'domicilio'
+  telefono: '',
+  direccion: '',
+  notasEntrega: '',
+  horaProgramada: null,
   _working: false,
 
   // ── BORRADOR EN LOCALSTORAGE ──────────────────────────────────────────────
@@ -54,6 +59,11 @@ const NuevoPedido = {
   async render(el, param1, param2) {
     this.items = [];
     this.mesa = '';
+    this.tipo = 'mesa';
+    this.telefono = '';
+    this.direccion = '';
+    this.notasEntrega = '';
+    this.horaProgramada = null;
     this.orden = null;
     this.cuenta = null;
     this._working = false;
@@ -115,7 +125,29 @@ const NuevoPedido = {
             <div class="cliente-row">
               <input type="text" id="clienteInput" class="cliente-input" placeholder="Nombre del cliente..."
                 value="${this.mesa}" oninput="NuevoPedido.setMesa(this.value)" autocomplete="off">
-              <button class="mesa-btn ${this.mesa === 'Para llevar' ? 'active' : ''}" onclick="NuevoPedido.setMesa('Para llevar'); document.getElementById('clienteInput').value='Para llevar'">Llevar</button>
+            </div>
+            <div class="tipo-selector" style="display:flex;gap:6px;margin:8px 0">
+              <button class="btn btn-sm ${this.tipo==='mesa'?'btn-primary':'btn-outline'} tipo-btn" onclick="NuevoPedido.setTipo('mesa',this)">🪑 Mesa</button>
+              <button class="btn btn-sm ${this.tipo==='llevar'?'btn-primary':'btn-outline'} tipo-btn" onclick="NuevoPedido.setTipo('llevar',this)">🛍️ Llevar</button>
+              <button class="btn btn-sm ${this.tipo==='domicilio'?'btn-primary':'btn-outline'} tipo-btn" onclick="NuevoPedido.setTipo('domicilio',this)">🛵 Domicilio</button>
+            </div>
+            <div id="camposEntrega" style="${this.tipo==='domicilio'?'':'display:none'};display:flex;flex-direction:column;gap:6px">
+              <input type="tel" id="telefonoInput" class="cliente-input" placeholder="Teléfono..."
+                value="${this.telefono}" oninput="NuevoPedido.telefono=this.value" inputmode="tel">
+              <input type="text" id="direccionInput" class="cliente-input" placeholder="Dirección de entrega..."
+                value="${this.direccion}" oninput="NuevoPedido.direccion=this.value">
+              <input type="text" id="notasEntregaInput" class="cliente-input" placeholder="Referencia (color de puerta, entre calles...)"
+                value="${this.notasEntrega}" oninput="NuevoPedido.notasEntrega=this.value">
+            </div>
+            <div style="margin-top:6px">
+              <label style="font-size:.82rem;color:var(--muted);display:flex;align-items:center;gap:6px;cursor:pointer">
+                <input type="checkbox" id="chkProgramado" ${this.horaProgramada?'checked':''} onchange="NuevoPedido.toggleProgramado(this.checked)">
+                Programar para hora específica
+              </label>
+              <div id="campoProgramado" style="${this.horaProgramada?'':'display:none'};margin-top:6px">
+                <input type="datetime-local" id="horaInput" class="cliente-input"
+                  value="${this.horaProgramada||''}" onchange="NuevoPedido.horaProgramada=this.value||null">
+              </div>
             </div>
             <div class="clientes-rapidos" id="clientesRapidos"></div>
           </div>
@@ -305,6 +337,28 @@ const NuevoPedido = {
     if (btn) btn.disabled = (!this.mesa && !this.cuenta) || !this.items.length;
   },
 
+  setTipo(tipo, btn) {
+    this.tipo = tipo;
+    document.querySelectorAll('.tipo-btn').forEach(b => {
+      b.classList.toggle('btn-primary', b === btn);
+      b.classList.toggle('btn-outline', b !== btn);
+    });
+    const campos = document.getElementById('camposEntrega');
+    if (campos) campos.style.display = tipo === 'domicilio' ? 'flex' : 'none';
+    // Llevar: limpiar nombre si era la mesa actual y poner "Para llevar"
+    if (tipo === 'llevar' && !this.mesa) {
+      this.setMesa('Para llevar');
+      const inp = document.getElementById('clienteInput');
+      if (inp) inp.value = 'Para llevar';
+    }
+  },
+
+  toggleProgramado(checked) {
+    const campo = document.getElementById('campoProgramado');
+    if (campo) campo.style.display = checked ? '' : 'none';
+    if (!checked) this.horaProgramada = null;
+  },
+
   async guardar() {
     if (this._working || (!this.mesa && !this.cuenta) || !this.items.length) return;
 
@@ -408,9 +462,14 @@ const NuevoPedido = {
       } else {
         // Nuevo pedido → crear cuenta + orden
         const [cuenta] = await SB.insertN('taq_cuentas', {
-          mesa: this.mesa,
+          mesa: this.tipo === 'mesa' ? this.mesa : (this.tipo === 'llevar' ? 'Para llevar' : 'Domicilio'),
           nombre_cliente: this.mesa,
-          total
+          total,
+          tipo_pedido: this.tipo,
+          telefono: this.telefono || null,
+          direccion: this.direccion || null,
+          notas_entrega: this.notasEntrega || null,
+          hora_programada: this.horaProgramada || null
         });
 
         const [orden] = await SB.insertN('taq_ordenes', {

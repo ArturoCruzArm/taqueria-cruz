@@ -50,6 +50,7 @@ const Cobrar = {
         <button class="btn btn-outline" onclick="location.hash='pedidos'">&larr; Volver</button>
         <h1>Cobrar${this.cuenta ? ' Cuenta' : ' #' + this.ordenes[0]?.numero}</h1>
         <button class="btn btn-sm btn-outline" onclick="Cobrar.imprimirTicket()">🖨️ Ticket</button>
+        <button class="btn btn-sm btn-outline" onclick="Cobrar.compartirWhatsApp()">📱 WhatsApp</button>
       </div>
 
       <div class="cobrar-layout">
@@ -292,6 +293,55 @@ const Cobrar = {
     if (header) header.style.display = 'block';
     window.print();
     if (header) header.style.display = 'none';
+  },
+
+  _textoTicket(negocio, cliente, items, total, metodo, descuento) {
+    const lineas = items.map(i =>
+      `${i.cantidad}x ${i.nombre_producto} — $${(i.cantidad * parseFloat(i.precio_unitario || 0)).toFixed(0)}`
+    );
+    const desc = parseFloat(descuento || 0);
+    const metodos = { efectivo: 'Efectivo 💵', tarjeta: 'Tarjeta 💳', transferencia: 'Transferencia 📱' };
+    return [
+      `*${negocio}*`,
+      cliente,
+      '',
+      ...lineas,
+      '---',
+      desc > 0 ? `Descuento: -$${desc.toFixed(0)}` : null,
+      `*Total: $${parseFloat(total).toFixed(0)}*`,
+      metodos[metodo] || metodo || ''
+    ].filter(l => l !== null).join('\n');
+  },
+
+  compartirWhatsApp() {
+    const negocio = Auth.negocio?.nombre || 'Taquería';
+    const cliente = this.cuenta?.nombre_cliente || this.ordenes[0]?.mesa || 'Cliente';
+    const texto = this._textoTicket(negocio, cliente, this.items, this.total,
+      document.querySelector('input[name="metodo"]:checked')?.value, this.descuento);
+    window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
+  },
+
+  async compartirWhatsAppCerrado(cuentaId) {
+    if (!cuentaId) return;
+    try {
+      const [cuentaArr, ordenes] = await Promise.all([
+        SB.get('taq_cuentas', `id=eq.${cuentaId}`),
+        SB.getN('taq_ordenes', `cuenta_id=eq.${cuentaId}&estado=neq.cancelada&order=created_at`)
+      ]);
+      if (!cuentaArr.length) return;
+      const cuenta = cuentaArr[0];
+      let items = [];
+      if (ordenes.length) {
+        items = await SB.get('taq_orden_items', `orden_id=in.(${ordenes.map(o => o.id).join(',')})&order=created_at`);
+      }
+      const negocio = Auth.negocio?.nombre || 'Taquería';
+      const texto = this._textoTicket(negocio,
+        cuenta.nombre_cliente || cuenta.mesa || 'Cliente',
+        items, cuenta.total, cuenta.metodo_pago, cuenta.descuento);
+      window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
+    } catch (e) {
+      App.toast('Error: ' + e.message, 'error');
+    }
   },
 
   async imprimirTicketCerrado(cuentaId) {

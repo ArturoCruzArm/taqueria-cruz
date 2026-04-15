@@ -19,20 +19,97 @@ const Corte = {
     }
   },
 
-  renderSinTurno(el) {
+  async renderSinTurno(el) {
+    // Sin turno activo: mostrar ventas de hoy y permitir corte igual
+    const desde = App.inicioDia(App.hoy());
+    const ordenes = await SB.getN('taq_ordenes', `estado=eq.cobrada&cobrada_at=gte.${desde}&order=cobrada_at.desc&limit=200`);
+    const canceladas = await SB.getN('taq_ordenes', `estado=eq.cancelada&created_at=gte.${desde}&select=id`);
+
+    let items = [];
+    if (ordenes.length) {
+      const ids = ordenes.map(o => o.id);
+      items = await SB.get('taq_orden_items', `orden_id=in.(${ids.join(',')})&order=created_at&limit=1000`);
+    }
+
+    const totalVentas = ordenes.reduce((s, o) => s + parseFloat(o.total || 0), 0);
+
+    const prodMap = {};
+    items.forEach(i => {
+      if (!prodMap[i.nombre_producto]) prodMap[i.nombre_producto] = { nombre: i.nombre_producto, cantidad: 0, total: 0 };
+      prodMap[i.nombre_producto].cantidad += i.cantidad;
+      prodMap[i.nombre_producto].total += i.cantidad * parseFloat(i.precio_unitario);
+    });
+    const prodList = Object.values(prodMap).sort((a, b) => b.cantidad - a.cantidad);
+
+    this._resumen = { totalVentas, numOrdenes: ordenes.length, prodList };
+
     el.innerHTML = `
       <div class="view-header">
         <h1>Corte de Caja</h1>
-      </div>
-      <div class="turno-inicio">
-        <div class="empty-state">
-          <p>No tienes un turno abierto.</p>
-          <p style="color:var(--muted);font-size:.85rem">Al iniciar turno, las ventas que cobres se registrarán bajo tu nombre.</p>
-          <button class="btn btn-primary btn-lg" onclick="Corte.iniciarTurno()" style="margin-top:16px">
-            Iniciar Mi Turno
-          </button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-sm btn-outline" onclick="Corte.exportarCSV()">⬇️ CSV</button>
+          <button class="btn btn-sm btn-outline" onclick="Corte.iniciarTurno()">▶ Iniciar Turno</button>
         </div>
       </div>
+
+      <p style="color:var(--muted);font-size:.82rem;margin-bottom:12px">
+        Sin turno abierto — mostrando todas las ventas de hoy
+      </p>
+
+      <div class="corte-resumen">
+        <div class="corte-stat corte-total">
+          <span class="corte-stat-label">Ventas de Hoy</span>
+          <span class="corte-stat-value">$${totalVentas.toFixed(0)}</span>
+        </div>
+        <div class="corte-stat">
+          <span class="corte-stat-label">Pedidos Cobrados</span>
+          <span class="corte-stat-value">${ordenes.length}</span>
+        </div>
+        <div class="corte-stat">
+          <span class="corte-stat-label">Productos Vendidos</span>
+          <span class="corte-stat-value">${items.reduce((s, i) => s + i.cantidad, 0)}</span>
+        </div>
+        <div class="corte-stat">
+          <span class="corte-stat-label">Cancelados</span>
+          <span class="corte-stat-value">${canceladas.length}</span>
+        </div>
+        <div class="corte-stat">
+          <span class="corte-stat-label">Ticket Promedio</span>
+          <span class="corte-stat-value">$${ordenes.length ? (totalVentas / ordenes.length).toFixed(0) : 0}</span>
+        </div>
+      </div>
+
+      <h2 style="margin:1.5rem 0 .8rem;">Productos Vendidos</h2>
+      <table class="corte-table">
+        <thead><tr><th>Producto</th><th>Cant.</th><th>Total</th></tr></thead>
+        <tbody>
+          ${prodList.map(p => `<tr><td>${p.nombre}</td><td>${p.cantidad}</td><td>$${p.total.toFixed(0)}</td></tr>`).join('')}
+          ${!prodList.length ? '<tr><td colspan="3" style="text-align:center;opacity:.5">Sin ventas hoy</td></tr>' : ''}
+        </tbody>
+      </table>
+
+      <h2 style="margin:1.5rem 0 .8rem;">Pedidos del Día</h2>
+      <table class="corte-table">
+        <thead><tr><th>#</th><th>Mesa</th><th>Total</th><th>Hora</th><th></th></tr></thead>
+        <tbody>
+          ${ordenes.map(o => `
+            <tr>
+              <td>${o.numero}</td>
+              <td>${o.mesa || 'Llevar'}</td>
+              <td>$${parseFloat(o.total).toFixed(0)}</td>
+              <td>${new Date(o.cobrada_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</td>
+              <td>${o.cuenta_id ? `<button class="btn btn-sm btn-outline" onclick="Cobrar.imprimirTicketCerrado('${o.cuenta_id}')">🖨️</button>` : ''}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+
+      ${ordenes.length ? `
+        <button class="btn btn-danger btn-block btn-lg" onclick="Corte.cerrarDia()" style="margin-top:1.5rem;">
+          Registrar Corte de Hoy
+        </button>
+      ` : ''}
+
       <h2 style="margin:2rem 0 .8rem;">Historial de Cortes</h2>
       <div id="historialCortes"><p class="loading">Cargando...</p></div>
     `;
@@ -268,7 +345,7 @@ const Corte = {
   async exportarCSV() {
     // Exportar órdenes cobradas del turno activo (o del día si no hay turno)
     const resumen = this._resumen;
-    if (!resumen) { App.toast('Primero abre un turno'); return; }
+    if (!resumen) { App.toast('Sin datos para exportar'); return; }
 
     const desde = this.turnoActivo?.inicio || App.inicioDia(App.hoy());
     const ordenes = await SB.getN('taq_ordenes',
@@ -308,5 +385,39 @@ const Corte = {
     a.click();
     URL.revokeObjectURL(url);
     App.toast('CSV descargado');
+  },
+
+  // Corte sin turno: guarda un corte de las ventas del día sin cerrar turno
+  async cerrarDia() {
+    if (this._closing) return;
+    if (!confirm('¿Registrar corte de hoy? Se guardará el resumen de ventas del día.')) return;
+    this._closing = true;
+
+    const { totalVentas, numOrdenes, prodList } = this._resumen || {};
+    const hoy = App.hoy();
+    const ahora = new Date().toISOString();
+
+    try {
+      await SB.insertN('taq_cortes', {
+        fecha: hoy,
+        total_ventas: totalVentas,
+        total_ordenes: numOrdenes,
+        productos_vendidos: prodList,
+        notas: `Corte del día ${hoy} — sin turno asignado`
+      });
+
+      Auth.audit('corte_modificado', null, {
+        total_ventas: totalVentas,
+        total_ordenes: numOrdenes
+      });
+
+      this._closing = false;
+      App.toast('Corte registrado correctamente');
+      this.render(document.getElementById('main'));
+    } catch (e) {
+      this._closing = false;
+      ErrorLogger?.capture(e, 'Corte.cerrarDia');
+      App.toast('Error al registrar corte: ' + e.message, 'error');
+    }
   }
 };

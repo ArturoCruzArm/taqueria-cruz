@@ -52,6 +52,13 @@ const ClienteApp = {
       if (mesas.length) this.mesa = mesas[0];
     }
 
+    // Modo ver-cuenta por QR (sin sesión propia)
+    const cuentaParam = params.get('cuenta');
+    if (cuentaParam) {
+      await this.renderCuentaPublica(cuentaParam);
+      return;
+    }
+
     // Recuperar sesión guardada (si el cliente ya hizo un pedido hoy)
     const saved = localStorage.getItem(`cli_sesion_${this.negocio.id}`);
     if (saved) {
@@ -575,6 +582,89 @@ const ClienteApp = {
     t.textContent = msg;
     t.className = 'cli-toast show';
     setTimeout(() => t.className = 'cli-toast', 2500);
+  },
+
+  // Vista pública de cuenta por QR — solo lectura, tiempo real
+  async renderCuentaPublica(cuentaId) {
+    const root = document.getElementById('cli-root');
+    const negocio = this.negocio?.nombre || 'Taquería';
+
+    const cargar = async () => {
+      const [cuentaArr, ordenes] = await Promise.all([
+        SB.get('taq_cuentas', `id=eq.${cuentaId}`),
+        SB.getN('taq_ordenes', `cuenta_id=eq.${cuentaId}&estado=neq.cancelada&order=created_at`)
+      ]);
+
+      if (!cuentaArr.length) {
+        root.innerHTML = `<div style="text-align:center;padding:40px;color:#888">Cuenta no encontrada</div>`;
+        return;
+      }
+      const cuenta = cuentaArr[0];
+
+      if (cuenta.estado === 'cobrada') {
+        root.innerHTML = `
+          <div class="cli-topbar"><div class="cli-negocio">${negocio}</div></div>
+          <div style="text-align:center;padding:48px 16px">
+            <div style="font-size:3rem">✅</div>
+            <p style="font-size:1.1rem;margin-top:8px">Esta cuenta ya fue cobrada</p>
+            <p style="color:#888;font-size:.85rem">Total: $${parseFloat(cuenta.total||0).toFixed(0)}</p>
+          </div>`;
+        return;
+      }
+
+      let items = [];
+      if (ordenes.length) {
+        items = await SB.get('taq_orden_items',
+          `orden_id=in.(${ordenes.map(o => o.id).join(',')})&order=created_at`);
+      }
+      const total = parseFloat(cuenta.total || 0);
+
+      root.innerHTML = `
+        <div class="cli-topbar">
+          <div>
+            <div class="cli-negocio">${negocio}</div>
+            <div class="cli-mesa">🧾 Cuenta de ${cuenta.nombre_cliente || 'Cliente'}</div>
+          </div>
+        </div>
+        <div style="padding:16px;max-width:480px;margin:0 auto">
+          <table style="width:100%;border-collapse:collapse">
+            <thead>
+              <tr style="border-bottom:1px solid #ddd">
+                <th style="text-align:left;padding:8px 4px;font-size:.85rem">Producto</th>
+                <th style="text-align:center;padding:8px 4px;font-size:.85rem">Cant</th>
+                <th style="text-align:right;padding:8px 4px;font-size:.85rem">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${items.map(i => `
+                <tr style="border-bottom:1px solid #f0f0f0">
+                  <td style="padding:8px 4px">
+                    ${i.nombre_producto}
+                    ${i.notas ? `<br><small style="color:#888">${i.notas}</small>` : ''}
+                    ${i.estado === 'entregado' ? ' <small style="color:#22c55e">✓</small>' : i.estado === 'listo' ? ' <small>🍽️</small>' : ''}
+                  </td>
+                  <td style="text-align:center;padding:8px 4px">${i.cantidad}</td>
+                  <td style="text-align:right;padding:8px 4px">$${(i.cantidad * parseFloat(i.precio_unitario||0)).toFixed(0)}</td>
+                </tr>
+              `).join('')}
+              ${!items.length ? '<tr><td colspan="3" style="text-align:center;padding:20px;color:#888">Sin productos aún</td></tr>' : ''}
+            </tbody>
+          </table>
+          <div style="border-top:2px solid var(--primary,#e94560);margin-top:12px;padding-top:12px;text-align:right;font-size:1.3rem;font-weight:700">
+            Total: $${total.toFixed(0)}
+          </div>
+          <p style="text-align:center;margin-top:20px;color:#888;font-size:.82rem">
+            Esta página se actualiza automáticamente
+          </p>
+        </div>
+      `;
+    };
+
+    await cargar();
+
+    // Realtime: actualizar cuando cambian los ítems de esta cuenta
+    SB.subscribeN('taq_orden_items', cargar);
+    SB.subscribeN('taq_cuentas', cargar);
   }
 };
 

@@ -92,8 +92,10 @@ const Pedidos = {
           <div class="pedido-time">${hora}</div>
           <div class="pedido-total">$${total.toFixed(0)} ${metodoIcon[c.metodo_pago] || ''}</div>
           ${c.descuento > 0 ? `<div style="font-size:.75rem;color:var(--text2)">Desc: -$${parseFloat(c.descuento).toFixed(0)}</div>` : ''}
-          <button class="btn btn-sm btn-outline" style="margin-top:6px"
-            onclick="Cobrar.imprimirTicketCerrado('${c.id}')">🖨️ Reimprimir</button>
+          <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+            <button class="btn btn-sm btn-outline" onclick="Cobrar.imprimirTicketCerrado('${c.id}')">🖨️ Reimprimir</button>
+            <button class="btn btn-sm btn-outline" onclick="Cobrar.compartirWhatsAppCerrado('${c.id}')">📱 WhatsApp</button>
+          </div>
         </div>
       `;
     });
@@ -326,6 +328,7 @@ const Pedidos = {
               💰 Cobrar${estadoGeneral !== 'lista' ? ' *' : ''}
             </button>
             <button class="btn btn-sm btn-outline" onclick="location.hash='nuevo/${ordenes[ordenes.length - 1].id}'">Editar</button>
+            <button class="btn btn-sm btn-outline" onclick="Pedidos.mostrarQR('${cuenta.id}')">📱 QR</button>
             ${Auth.esAdmin() ? `<button class="btn btn-sm btn-danger" onclick="Pedidos.eliminarCuenta('${cuenta.id}', '${(cuenta.nombre_cliente || '').replace(/'/g,"\\'")}')">🗑️</button>` : ''}
           </div>
         </div>
@@ -395,5 +398,32 @@ const Pedidos = {
     await SB.update('taq_cuentas', `id=eq.${cuentaId}`, { estado: 'cancelada' });
     Auth.audit('orden_eliminada', cuentaId, { nombre, motivo, ordenes: ordenes.length }, 'critical');
     App.toast('Cuenta eliminada');
+  },
+
+  mostrarQR(cuentaId) {
+    const slug = Auth.negocio?.slug || '';
+    const base = location.origin + location.pathname.replace(/\/[^/]*$/, '/');
+    const url = `${base}cliente.html?n=${slug}&cuenta=${cuentaId}`;
+    const qrImg = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
+
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.onclick = e => { if (e.target === modal) modal.remove(); };
+    modal.innerHTML = `
+      <div class="modal-card" style="text-align:center;max-width:300px">
+        <div class="modal-header">
+          <h2>Compartir Cuenta</h2>
+          <button class="btn btn-sm btn-outline" onclick="this.closest('.modal-overlay').remove()">✕</button>
+        </div>
+        <p style="font-size:.82rem;color:var(--muted);margin-bottom:12px">El cliente escanea este QR para ver su cuenta en tiempo real</p>
+        <img src="${qrImg}" alt="QR" style="width:200px;height:200px;border-radius:8px;border:1px solid var(--border)">
+        <div style="margin-top:12px;font-size:.72rem;word-break:break-all;color:var(--muted)">${url}</div>
+        <div style="display:flex;gap:8px;margin-top:12px;justify-content:center;flex-wrap:wrap">
+          <button class="btn btn-sm btn-primary" onclick="navigator.clipboard.writeText('${url.replace(/'/g,"\\'")}').then(()=>App.toast('URL copiada'))">📋 Copiar URL</button>
+          <a class="btn btn-sm btn-outline" href="${url}" target="_blank">🔗 Abrir</a>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
   }
 };
