@@ -145,9 +145,9 @@ const Corte = {
     const inicio = new Date(turno.inicio).toISOString();
 
     // Órdenes cobradas durante este turno
-    const ordenes = await SB.getN('taq_ordenes', `estado=eq.cobrada&cobrada_at=gte.${inicio}&turno_id=eq.${turno.id}&order=cobrada_at.desc`);
+    const ordenes = await SB.getN('taq_ordenes', `estado=eq.cobrada&cobrada_at=gte.${inicio}&turno_id=eq.${turno.id}&order=cobrada_at.desc&limit=500`);
     // También órdenes cobradas sin turno_id en este período (compatibilidad)
-    const ordenesSinTurno = await SB.getN('taq_ordenes', `estado=eq.cobrada&cobrada_at=gte.${inicio}&turno_id=is.null&order=cobrada_at.desc`);
+    const ordenesSinTurno = await SB.getN('taq_ordenes', `estado=eq.cobrada&cobrada_at=gte.${inicio}&turno_id=is.null&order=cobrada_at.desc&limit=500`);
     const todasOrdenes = [...ordenes, ...ordenesSinTurno];
 
     const canceladas = await SB.getN('taq_ordenes', `estado=eq.cancelada&created_at=gte.${inicio}&select=id`);
@@ -155,7 +155,7 @@ const Corte = {
     let items = [];
     if (todasOrdenes.length) {
       const ids = todasOrdenes.map(o => o.id);
-      items = await SB.get('taq_orden_items', `orden_id=in.(${ids.join(',')})&order=created_at`);
+      items = await SB.getAll('taq_orden_items', `orden_id=in.(${ids.join(',')})&order=created_at`);
     }
 
     const totalVentas = todasOrdenes.reduce((s, o) => s + parseFloat(o.total || 0), 0);
@@ -394,13 +394,13 @@ const Corte = {
     if (!resumen) { App.toast('Sin datos para exportar'); return; }
 
     const desde = this.turnoActivo?.inicio || App.inicioDia(App.hoy());
-    const ordenes = await SB.getN('taq_ordenes',
+    const ordenes = await SB.getAllN('taq_ordenes',
       `estado=eq.cobrada&cobrada_at=gte.${desde}&order=cobrada_at`);
 
     if (!ordenes.length) { App.toast('Sin ventas para exportar'); return; }
 
     const ids = ordenes.map(o => o.id).join(',');
-    const items = await SB.get('taq_orden_items', `orden_id=in.(${ids})&order=created_at`);
+    const items = await SB.getAll('taq_orden_items', `orden_id=in.(${ids})&order=created_at`);
 
     // Construir CSV
     const enc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;

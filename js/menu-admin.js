@@ -19,7 +19,7 @@ const MenuAdmin = {
         return `
           <div class="admin-cat-section">
             <div class="admin-cat-header">
-              <h2>${c.icono} ${c.nombre}</h2>
+              <h2>${c.icono} ${App.esc(c.nombre)}</h2>
               <div>
                 <button class="btn btn-sm btn-outline" onclick="MenuAdmin.editarCategoria('${c.id}', '${c.nombre.replace(/'/g,"\\'")}', '${c.icono}')">✏️</button>
                 <button class="btn btn-sm btn-outline" onclick="MenuAdmin.nuevoProducto('${c.id}')">+ Producto</button>
@@ -30,7 +30,7 @@ const MenuAdmin = {
               <tbody>
                 ${catProds.map(p => `
                   <tr class="${p.disponible ? '' : 'no-disponible'}">
-                    <td>${p.nombre}</td>
+                    <td>${App.esc(p.nombre)}</td>
                     <td>$${parseFloat(p.precio).toFixed(0)}</td>
                     <td>
                       <button class="btn btn-sm ${p.disponible ? 'btn-success' : 'btn-outline'}"
