@@ -364,9 +364,16 @@ const ClienteApp = {
     const renderCuentaHTML = async () => {
       const orden = await SB.get('taq_ordenes', `id=eq.${this.sesion.orden_id}&limit=1`);
       if (!orden.length || orden[0].estado === 'cobrada' || orden[0].estado === 'cancelada') {
+        // Capturar items antes de limpiar la sesión para mostrar el ticket final
+        const itemsFinal = orden.length
+          ? await SB.get('taq_orden_items', `orden_id=eq.${this.sesion.orden_id}&order=created_at`)
+          : [];
+        const totalFinal = itemsFinal.reduce((s, i) => s + i.cantidad * parseFloat(i.precio_unitario || 0), 0);
+        const nombreFinal = this.sesion.nombre;
         this.sesion = null;
         localStorage.removeItem(`cli_sesion_${this.negocio.id}`);
-        this.renderFin(orden[0]?.estado);
+        if (this._subOrdenes) { SB.unsubscribe(this._subOrdenes); this._subOrdenes = null; }
+        this.renderFin(orden[0]?.estado, itemsFinal, totalFinal, nombreFinal);
         return;
       }
 
@@ -538,22 +545,127 @@ const ClienteApp = {
 
   // ── PANTALLA FINAL ──
 
-  renderFin(estado) {
+  renderFin(estado, items = [], total = 0, nombre = '') {
     const root = document.getElementById('cli-root');
     const cobrada = estado === 'cobrada';
+
+    // Caso cancelada o sin datos: mensaje simple
+    if (!cobrada || !items.length) {
+      root.innerHTML = `
+        <div class="cli-topbar">
+          <div class="cli-negocio">${this.esc(this.negocio.nombre)}</div>
+        </div>
+        <div class="cli-estado">
+          <div class="cli-estado-icon">${cobrada ? '✅' : '👋'}</div>
+          <h2>${cobrada ? '¡Gracias por tu visita!' : 'Pedido finalizado'}</h2>
+          <p>${cobrada ? 'El pago ha sido registrado. Vuelve pronto.' : 'Tu pedido ha sido cerrado.'}</p>
+          <button class="cli-btn cli-btn-primary" style="margin-top:16px" onclick="location.reload()">
+            Nuevo pedido
+          </button>
+        </div>
+      `;
+      return;
+    }
+
+    // Cobrada con ticket: mostrar desglose + opciones para compartir
+    const fecha = new Date().toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
+    this._ultimoTicket = this._ticketText(nombre, items, total, fecha);
+
     root.innerHTML = `
       <div class="cli-topbar">
-        <div class="cli-negocio">${this.negocio.nombre}</div>
+        <div class="cli-negocio">${this.esc(this.negocio.nombre)}</div>
       </div>
-      <div class="cli-estado">
-        <div class="cli-estado-icon">${cobrada ? '✅' : '👋'}</div>
-        <h2>${cobrada ? '¡Gracias por tu visita!' : 'Pedido finalizado'}</h2>
-        <p>${cobrada ? 'El pago ha sido registrado. Vuelve pronto.' : 'Tu pedido ha sido cerrado.'}</p>
-        <button class="cli-btn cli-btn-primary" style="margin-top:16px" onclick="location.reload()">
-          Nuevo pedido
-        </button>
+      <div style="padding:16px;max-width:480px;margin:0 auto">
+        <div style="text-align:center;margin-bottom:16px">
+          <div style="font-size:3rem">✅</div>
+          <h2 style="font-size:1.2rem;margin-top:8px">¡Gracias${nombre ? ', ' + this.esc(nombre) : ''}!</h2>
+          <p style="color:var(--muted);font-size:.88rem;margin-top:4px">Pago registrado</p>
+        </div>
+
+        <div style="background:var(--surface);border-radius:var(--radius);padding:16px;margin-bottom:12px">
+          <div style="text-align:center;color:var(--muted);font-size:.78rem;margin-bottom:12px;border-bottom:1px dashed var(--border);padding-bottom:8px">
+            🧾 ${fecha}
+          </div>
+          <table style="width:100%;border-collapse:collapse;font-size:.88rem">
+            ${items.map(i => `
+              <tr>
+                <td style="padding:4px 0;vertical-align:top">
+                  <strong>${i.cantidad}x</strong> ${this.esc(i.nombre_producto)}
+                  ${i.notas ? `<br><small style="color:var(--muted)">${this.esc(i.notas)}</small>` : ''}
+                </td>
+                <td style="padding:4px 0;text-align:right;white-space:nowrap;vertical-align:top">
+                  $${(i.cantidad * parseFloat(i.precio_unitario || 0)).toFixed(0)}
+                </td>
+              </tr>
+            `).join('')}
+          </table>
+          <div style="border-top:1px dashed var(--border);margin-top:8px;padding-top:8px;display:flex;justify-content:space-between;font-weight:700;font-size:1.05rem">
+            <span>Total</span>
+            <span>$${total.toFixed(0)}</span>
+          </div>
+        </div>
+
+        <p style="color:var(--muted);font-size:.78rem;text-align:center;margin-bottom:12px">
+          Guarda este ticket. Para aclaraciones muéstralo al mesero.
+        </p>
+
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button class="cli-btn cli-btn-primary" onclick="ClienteApp.compartirUltimo()">📤 Compartir ticket</button>
+          <button class="cli-btn cli-btn-outline" onclick="ClienteApp.whatsappUltimo()">💬 Enviar por WhatsApp</button>
+          <button class="cli-btn cli-btn-outline" onclick="ClienteApp.copiarUltimo()">📋 Copiar al portapapeles</button>
+          <button class="cli-btn cli-btn-outline" onclick="location.reload()">Nuevo pedido</button>
+        </div>
       </div>
     `;
+  },
+
+  // ── TICKET: texto plano + compartir ──
+
+  _ticketText(nombre, items, total, fecha) {
+    let s = `🧾 ${this.negocio.nombre}\n`;
+    if (nombre) s += `Cliente: ${nombre}\n`;
+    s += `${fecha}\n`;
+    s += '────────────────\n';
+    items.forEach(i => {
+      const sub = (i.cantidad * parseFloat(i.precio_unitario || 0)).toFixed(0);
+      s += `${i.cantidad}x ${i.nombre_producto}  $${sub}\n`;
+      if (i.notas) s += `   (${i.notas})\n`;
+    });
+    s += '────────────────\n';
+    s += `Total: $${total.toFixed(0)}\n\n`;
+    s += '¡Gracias por tu visita!';
+    return s;
+  },
+
+  async compartirUltimo() {
+    const texto = this._ultimoTicket;
+    if (!texto) return;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: this.negocio.nombre, text: texto });
+      } else {
+        await navigator.clipboard.writeText(texto);
+        this.toast('Ticket copiado ✓');
+      }
+    } catch (_) { /* usuario canceló */ }
+  },
+
+  whatsappUltimo() {
+    const texto = this._ultimoTicket;
+    if (!texto) return;
+    const url = 'https://wa.me/?text=' + encodeURIComponent(texto);
+    window.open(url, '_blank');
+  },
+
+  async copiarUltimo() {
+    const texto = this._ultimoTicket;
+    if (!texto) return;
+    try {
+      await navigator.clipboard.writeText(texto);
+      this.toast('Ticket copiado ✓');
+    } catch (_) {
+      this.toast('No se pudo copiar');
+    }
   },
 
   // ── UTILIDADES ──
@@ -609,23 +721,65 @@ const ClienteApp = {
       }
       const cuenta = cuentaArr[0];
 
-      if (cuenta.estado === 'cobrada') {
-        root.innerHTML = `
-          <div class="cli-topbar"><div class="cli-negocio">${negocio}</div></div>
-          <div style="text-align:center;padding:48px 16px">
-            <div style="font-size:3rem">✅</div>
-            <p style="font-size:1.1rem;margin-top:8px">Esta cuenta ya fue cobrada</p>
-            <p style="color:#888;font-size:.85rem">Total: $${parseFloat(cuenta.total||0).toFixed(0)}</p>
-          </div>`;
-        return;
-      }
-
       let items = [];
       if (ordenes.length) {
         items = await SB.get('taq_orden_items',
           `orden_id=in.(${ordenes.map(o => o.id).join(',')})&order=created_at`);
       }
       const total = parseFloat(cuenta.total || 0);
+
+      if (cuenta.estado === 'cobrada') {
+        const fechaCobro = cuenta.cobrada_at
+          ? new Date(cuenta.cobrada_at).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })
+          : new Date().toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
+        this._ultimoTicket = this._ticketText(cuenta.nombre_cliente || '', items, total, fechaCobro);
+
+        root.innerHTML = `
+          <div class="cli-topbar"><div class="cli-negocio">${this.esc(negocio)}</div></div>
+          <div style="padding:16px;max-width:480px;margin:0 auto">
+            <div style="text-align:center;margin-bottom:16px">
+              <div style="font-size:3rem">✅</div>
+              <h2 style="font-size:1.15rem;margin-top:8px">Cuenta cobrada</h2>
+              <p style="color:var(--muted);font-size:.85rem;margin-top:4px">${this.esc(cuenta.nombre_cliente || 'Cliente')}</p>
+            </div>
+
+            <div style="background:var(--surface);border-radius:var(--radius);padding:16px;margin-bottom:12px">
+              <div style="text-align:center;color:var(--muted);font-size:.78rem;margin-bottom:12px;border-bottom:1px dashed var(--border);padding-bottom:8px">
+                🧾 ${fechaCobro}
+              </div>
+              <table style="width:100%;border-collapse:collapse;font-size:.88rem">
+                ${items.map(i => `
+                  <tr>
+                    <td style="padding:4px 0;vertical-align:top">
+                      <strong>${i.cantidad}x</strong> ${this.esc(i.nombre_producto)}
+                      ${i.notas ? `<br><small style="color:var(--muted)">${this.esc(i.notas)}</small>` : ''}
+                    </td>
+                    <td style="padding:4px 0;text-align:right;white-space:nowrap;vertical-align:top">
+                      $${(i.cantidad * parseFloat(i.precio_unitario || 0)).toFixed(0)}
+                    </td>
+                  </tr>
+                `).join('')}
+                ${!items.length ? '<tr><td colspan="2" style="text-align:center;padding:12px;color:var(--muted)">Sin detalle disponible</td></tr>' : ''}
+              </table>
+              <div style="border-top:1px dashed var(--border);margin-top:8px;padding-top:8px;display:flex;justify-content:space-between;font-weight:700;font-size:1.05rem">
+                <span>Total</span>
+                <span>$${total.toFixed(0)}</span>
+              </div>
+            </div>
+
+            <p style="color:var(--muted);font-size:.78rem;text-align:center;margin-bottom:12px">
+              Guarda este ticket. Para aclaraciones muéstralo al mesero.
+            </p>
+
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <button class="cli-btn cli-btn-primary" onclick="ClienteApp.compartirUltimo()">📤 Compartir ticket</button>
+              <button class="cli-btn cli-btn-outline" onclick="ClienteApp.whatsappUltimo()">💬 Enviar por WhatsApp</button>
+              <button class="cli-btn cli-btn-outline" onclick="ClienteApp.copiarUltimo()">📋 Copiar al portapapeles</button>
+            </div>
+          </div>
+        `;
+        return;
+      }
 
       root.innerHTML = `
         <div class="cli-topbar">
