@@ -391,7 +391,7 @@ const App = {
 
   renderPlaceholder(el, titulo, icon) {
     el.innerHTML = `
-      <div class="view-header"><h1>${icon} ${titulo}</h1></div>
+      <div class="view-header"><h1>${this.esc(icon)} ${this.esc(titulo)}</h1></div>
       <div class="empty-state"><p>Próximamente</p></div>
     `;
   },

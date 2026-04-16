@@ -158,7 +158,7 @@ const Auth = {
       <div class="login-screen">
         <div class="login-card">
           <div class="login-logo">🌮</div>
-          <h1 class="login-title">${nombreNegocio}</h1>
+          <h1 class="login-title">${App.esc(nombreNegocio)}</h1>
           <p class="login-sub">Ingresa tu PIN</p>
           <div class="pin-display" id="pinDisplay">
             <span class="pin-dot"></span>

@@ -367,10 +367,11 @@ const Cobrar = {
       const fecha   = new Date(cuenta.cobrada_at || Date.now()).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
       const metodos = { efectivo: 'Efectivo 💵', tarjeta: 'Tarjeta 💳', transferencia: 'Transferencia 📱' };
 
+      const esc = s => String(s || '').replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c]));
       const rows = items.map(i => `
         <tr>
           <td>${i.cantidad}</td>
-          <td>${i.nombre_producto}${i.notas ? '<br><small>' + i.notas + '</small>' : ''}</td>
+          <td>${esc(i.nombre_producto)}${i.notas ? '<br><small>' + esc(i.notas) + '</small>' : ''}</td>
           <td class="r">$${(i.cantidad * parseFloat(i.precio_unitario || 0)).toFixed(0)}</td>
         </tr>`).join('');
 
@@ -389,9 +390,9 @@ const Cobrar = {
         .footer { text-align: center; margin-top: 14px; font-size: 10px; color: #666; border-top: 1px solid #000; padding-top: 6px; }
         @media print { body { margin: 0; } }
       </style></head><body>
-        <h2>${negocio}</h2>
+        <h2>${esc(negocio)}</h2>
         <div class="sub">
-          ${cuenta.nombre_cliente || cuenta.mesa || 'Cliente'}<br>
+          ${esc(cuenta.nombre_cliente || cuenta.mesa || 'Cliente')}<br>
           ${fecha}
           ${ordenes.length > 1 ? ' · ' + ordenes.length + ' pedidos' : ''}
         </div>
