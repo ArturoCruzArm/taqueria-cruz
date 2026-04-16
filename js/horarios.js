@@ -118,8 +118,8 @@ const Horarios = (() => {
         ${DIAS[i]}<br><span style="font-size:11px;font-weight:normal">${d.getDate()}/${d.getMonth() + 1}</span>
       </th>`;
     }
-      <th style="min-width:60px;text-align:center;padding:8px;border-left:2px solid #333">Total</th>
-    </tr></thead><tbody>
+    html += `<th style="min-width:60px;text-align:center;padding:8px;border-left:2px solid #333">Total</th>
+    </tr></thead><tbody>`;
 
     // Helper: diferencia de horas entre dos strings "HH:MM:SS"
     function horasEntre(hi, hf) {
